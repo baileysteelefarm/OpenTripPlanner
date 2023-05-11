@@ -209,6 +209,8 @@ public class ApiLeg {
 
   public Boolean rentedBike;
 
+  public Boolean callAndRide;
+
   /**
    * Is this leg walking with a bike?
    *

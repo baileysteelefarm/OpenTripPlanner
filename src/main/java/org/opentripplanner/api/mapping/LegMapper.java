@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Locale;
 import org.opentripplanner.api.model.ApiAlert;
 import org.opentripplanner.api.model.ApiLeg;
+import org.opentripplanner.ext.flex.FlexibleTransitLeg;
 import org.opentripplanner.framework.geometry.EncodedPolyline;
 import org.opentripplanner.model.PickDrop;
 import org.opentripplanner.model.plan.Leg;
@@ -114,6 +115,7 @@ public class LegMapper {
       api.tripId = FeedScopedIdMapper.mapToApi(trip.getId());
       api.tripShortName = trip.getShortName();
       api.tripBlockId = trip.getGtfsBlockId();
+      api.callAndRide = domain instanceof FlexibleTransitLeg;
     } else if (domain instanceof StreetLeg streetLeg) {
       api.transitLeg = false;
       api.mode = ModeMapper.mapToApi(streetLeg.getMode());
