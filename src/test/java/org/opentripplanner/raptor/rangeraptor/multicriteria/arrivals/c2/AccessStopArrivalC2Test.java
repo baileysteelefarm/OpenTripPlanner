@@ -1,12 +1,10 @@
 package org.opentripplanner.raptor.rangeraptor.multicriteria.arrivals.c2;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.opentripplanner.raptor.api.model.PathLegType.ACCESS;
-import static org.opentripplanner.raptor.api.model.PathLegType.TRANSIT;
 
 import org.junit.jupiter.api.Test;
 import org.opentripplanner.raptor._data.transit.TestAccessEgress;
@@ -22,7 +20,7 @@ class AccessStopArrivalC2Test {
   private static final int ACCESS_DURATION = 10 * 60;
   private static final int ALIGHT_TIME = DEPARTURE_TIME + ACCESS_DURATION;
   private static final TestAccessEgress WALK = TestAccessEgress.walk(ALIGHT_STOP, ACCESS_DURATION);
-  private static final int COST = WALK.generalizedCost();
+  private static final int C1 = WALK.c1();
 
   private final AccessStopArrivalC2<RaptorTripSchedule> subject = new AccessStopArrivalC2<>(
     DEPARTURE_TIME,
@@ -47,7 +45,7 @@ class AccessStopArrivalC2Test {
 
   @Test
   public void c1() {
-    assertEquals(COST, subject.c1());
+    assertEquals(C1, subject.c1());
   }
 
   @Test
@@ -81,7 +79,7 @@ class AccessStopArrivalC2Test {
   @Test
   public void testToString() {
     assertEquals(
-      "Access { stop: 100, arrival: [8:10 $1200], path: Walk 10m ~ 100 }",
+      "Access { stop: 100, arrival: [8:10 C₁1_200 C₂0], path: Walk 10m C₁1_200 ~ 100 }",
       subject.toString()
     );
   }

@@ -4,29 +4,35 @@ import static org.opentripplanner.standalone.config.framework.json.OtpVersion.V2
 import static org.opentripplanner.standalone.config.framework.json.OtpVersion.V2_1;
 import static org.opentripplanner.standalone.config.framework.json.OtpVersion.V2_2;
 import static org.opentripplanner.standalone.config.framework.json.OtpVersion.V2_3;
+import static org.opentripplanner.standalone.config.framework.json.OtpVersion.V2_4;
+import static org.opentripplanner.standalone.config.framework.json.OtpVersion.V2_5;
 import static org.opentripplanner.standalone.config.routerequest.ItineraryFiltersConfig.mapItineraryFilterParams;
 import static org.opentripplanner.standalone.config.routerequest.TransferConfig.mapTransferPreferences;
+import static org.opentripplanner.standalone.config.routerequest.TriangleOptimizationConfig.mapOptimizationTriangle;
+import static org.opentripplanner.standalone.config.routerequest.VehicleParkingConfig.mapParking;
+import static org.opentripplanner.standalone.config.routerequest.VehicleRentalConfig.mapRental;
+import static org.opentripplanner.standalone.config.routerequest.VehicleWalkingConfig.mapVehicleWalking;
 import static org.opentripplanner.standalone.config.routerequest.WheelchairConfig.mapWheelchairPreferences;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.opentripplanner.api.parameter.QualifiedModeSet;
 import org.opentripplanner.framework.application.OTPFeature;
+import org.opentripplanner.framework.lang.StringUtils;
 import org.opentripplanner.routing.api.request.RequestModes;
 import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.routing.api.request.StreetMode;
+import org.opentripplanner.routing.api.request.framework.CostLinearFunction;
+import org.opentripplanner.routing.api.request.preference.AccessEgressPreferences;
 import org.opentripplanner.routing.api.request.preference.BikePreferences;
 import org.opentripplanner.routing.api.request.preference.CarPreferences;
 import org.opentripplanner.routing.api.request.preference.RoutingPreferences;
+import org.opentripplanner.routing.api.request.preference.ScooterPreferences;
 import org.opentripplanner.routing.api.request.preference.StreetPreferences;
 import org.opentripplanner.routing.api.request.preference.SystemPreferences;
 import org.opentripplanner.routing.api.request.preference.TransitPreferences;
-import org.opentripplanner.routing.api.request.preference.VehicleRentalPreferences;
 import org.opentripplanner.routing.api.request.preference.WalkPreferences;
-import org.opentripplanner.routing.api.request.request.VehicleParkingRequest;
-import org.opentripplanner.routing.api.request.request.VehicleRentalRequest;
-import org.opentripplanner.routing.api.request.request.filter.VehicleParkingFilter.TagsFilter;
-import org.opentripplanner.routing.api.request.request.filter.VehicleParkingFilterRequest;
 import org.opentripplanner.standalone.config.framework.json.NodeAdapter;
 import org.opentripplanner.standalone.config.sandbox.DataOverlayParametersMapper;
 import org.opentripplanner.transit.model.basic.TransitMode;
@@ -35,21 +41,14 @@ public class RouteRequestConfig {
 
   private static final String WHEELCHAIR_ACCESSIBILITY = "wheelchairAccessibility";
 
-  public static RouteRequest mapDefaultRouteRequest(
-    NodeAdapter root,
-    String parameterName,
-    Duration streetRoutingTimeout
-  ) {
+  public static RouteRequest mapDefaultRouteRequest(String parameterName, NodeAdapter root) {
     var c = root
       .of(parameterName)
       .since(V2_0)
       .summary("The default parameters for the routing query.")
       .description("Most of these are overridable through the various API endpoints.")
       .asObject();
-    var routeRequest = mapRouteRequest(c);
-    routeRequest.withPreferences(p -> p.withStreet(s -> s.withRoutingTimeout(streetRoutingTimeout))
-    );
-    return routeRequest;
+    return mapRouteRequest(c);
   }
 
   public static RouteRequest mapRouteRequest(NodeAdapter c) {
@@ -62,21 +61,10 @@ public class RouteRequestConfig {
     }
 
     RouteRequest request = dft.clone();
-    VehicleRentalRequest vehicleRental = request.journey().rental();
-    VehicleParkingRequest vehicleParking = request.journey().parking();
 
     // Keep this alphabetically sorted so it is easy to check if a parameter is missing from the
     // mapping or duplicate exist.
 
-    vehicleRental.setAllowedNetworks(
-      c
-        .of("allowedVehicleRentalNetworks")
-        .since(V2_1)
-        .summary(
-          "The vehicle rental networks which may be used. If empty all networks may be used."
-        )
-        .asStringSet(vehicleRental.allowedNetworks())
-    );
     request.setArriveBy(
       c
         .of("arriveBy")
@@ -84,29 +72,6 @@ public class RouteRequestConfig {
         .summary("Whether the trip should depart or arrive at the specified date and time.")
         .asBoolean(dft.arriveBy())
     );
-
-    vehicleRental.setBannedNetworks(
-      c
-        .of("bannedVehicleRentalNetworks")
-        .since(V2_1)
-        .summary(
-          "he vehicle rental networks which may not be used. If empty, no networks are banned."
-        )
-        .asStringSet(vehicleRental.bannedNetworks())
-    );
-
-    request
-      .journey()
-      .rental()
-      .setAllowArrivingInRentedVehicleAtDestination(
-        c
-          .of("allowKeepingRentedBicycleAtDestination")
-          .since(V2_2)
-          .summary(
-            "If a vehicle should be allowed to be kept at the end of a station-based rental."
-          )
-          .asBoolean(request.journey().rental().allowArrivingInRentedVehicleAtDestination())
-      );
 
     request.setLocale(c.of("locale").since(V2_0).summary("TODO").asLocale(dft.locale()));
 
@@ -142,7 +107,7 @@ public class RouteRequestConfig {
   latest-departure-time(LDT). In case of a reverse search it will be the time from earliest to
   latest arrival time (LAT - EAT).
 
-  All optimal travels that depart within the search window is guarantied to be found.
+  All optimal travels that depart within the search window is guaranteed to be found.
 
   This is sometimes referred to as the Range Raptor Search Window - but could be used in a none
   Transit search as well; Hence this is named search-window and not raptor-search-window.
@@ -161,44 +126,6 @@ public class RouteRequestConfig {
         .asDuration(dft.searchWindow())
     );
 
-    vehicleParking.setUnpreferredCost(
-      c
-        .of("unpreferredVehicleParkingTagCost")
-        .since(V2_3)
-        .summary("What cost to add if a parking facility doesn't contain a preferred tag.")
-        .description("See `preferredVehicleParkingTags`.")
-        .asInt(vehicleParking.unpreferredCost())
-    );
-
-    var bannedTags = c
-      .of("bannedVehicleParkingTags")
-      .since(V2_1)
-      .summary("Tags with which a vehicle parking will not be used. If empty, no tags are banned.")
-      .asStringSet(List.of());
-
-    var requiredTags = c
-      .of("requiredVehicleParkingTags")
-      .since(V2_1)
-      .summary(
-        "Tags without which a vehicle parking will not be used. If empty, no tags are required."
-      )
-      .asStringSet(List.of());
-    vehicleParking.setFilter(
-      new VehicleParkingFilterRequest(new TagsFilter(bannedTags), new TagsFilter(requiredTags))
-    );
-
-    var preferredTags = c
-      .of("preferredVehicleParkingTags")
-      .since(V2_3)
-      .summary(
-        "Vehicle parking facilities that don't have one of these tags will receive an extra cost and will therefore be penalised."
-      )
-      .asStringSet(List.of());
-
-    vehicleParking.setPreferred(
-      new VehicleParkingFilterRequest(List.of(), List.of(new TagsFilter(preferredTags)))
-    );
-
     request.setWheelchair(WheelchairConfig.wheelchairEnabled(c, WHEELCHAIR_ACCESSIBILITY));
 
     NodeAdapter unpreferred = c
@@ -210,7 +137,7 @@ public class RouteRequestConfig {
       .description(
         """
 A cost is applied to boarding nonpreferred authorities or routes.
-                    
+
 The routing engine will add extra penalty - on the *unpreferred* routes and/or agencies using a
 cost function. The cost function (`unpreferredCost`) is defined as a linear function of the form
 `A + B x`, where `A` is a fixed cost (in seconds) and `B` is reluctance multiplier for transit leg
@@ -246,6 +173,8 @@ travel time `x` (in seconds).
           .asFeedScopedIds(request.journey().transit().unpreferredAgencies())
       );
 
+    TransitGroupPriorityConfig.mapTransitRequest(c, request.journey().transit());
+
     // Map preferences
     request.withPreferences(preferences -> mapPreferences(c, preferences));
 
@@ -255,9 +184,9 @@ travel time `x` (in seconds).
   private static void mapPreferences(NodeAdapter c, RoutingPreferences.Builder preferences) {
     preferences.withTransit(it -> mapTransitPreferences(c, it));
     preferences.withBike(it -> mapBikePreferences(c, it));
-    preferences.withRental(it -> mapRentalPreferences(c, it));
     preferences.withStreet(it -> mapStreetPreferences(c, it));
     preferences.withCar(it -> mapCarPreferences(c, it));
+    preferences.withScooter(it -> mapScooterPreferences(c, it));
     preferences.withSystem(it -> mapSystemPreferences(c, it));
     preferences.withTransfer(it -> mapTransferPreferences(c, it));
     preferences.withWalk(it -> mapWalkPreferences(c, it));
@@ -308,7 +237,7 @@ travel time `x` (in seconds).
 The board time is added to the time when going from the stop (offboard) to onboard a transit
 vehicle.
 
-This is the same as the `minimumTransferTime`, except that this also apply to to the first
+This is the same as the `transferSlack`, except that this also apply to to the first
 transit leg in the trip. This is the default value used, if not overridden by the `boardSlackList`.
 """
               )
@@ -334,7 +263,7 @@ ferries, where the check-in process needs to be done in good time before ride.
         c
           .of("ignoreRealtimeUpdates")
           .since(V2_0)
-          .summary("When true, realtime updates are ignored during this search.")
+          .summary("When true, real-time updates are ignored during this search.")
           .asBoolean(dft.ignoreRealtimeUpdates())
       )
       .setOtherThanPreferredRoutesPenalty(
@@ -364,199 +293,110 @@ ferries, where the check-in process needs to be done in good time before ride.
           .description(
             """
             Function should return number of seconds that we are willing to wait for preferred route
-            or for an unpreferred agency's departure. For example, 600 + 2.0 x
+            or for an unpreferred agency's departure. For example: `5m + 2.0 t`
             """
           )
-          .asLinearFunction(dft.unpreferredCost())
+          .asCostLinearFunction(dft.unpreferredCost())
+      );
+
+    String relaxTransitGroupPriorityValue = c
+      .of("relaxTransitGroupPriority")
+      .since(V2_5)
+      .summary("The relax function for transit-group-priority")
+      .description(
+        """
+        A path is considered optimal if the generalized-cost is less than the generalized-cost of
+        another path. If this parameter is set, the comparison is relaxed further if they belong
+        to different transit groups.
+        """
       )
-      .withRaptor(it ->
-        c
-          .of("relaxTransitSearchGeneralizedCostAtDestination")
-          .since(V2_3)
-          .summary("Whether non-optimal transit paths at the destination should be returned")
-          .description(
-            """
+      .asString(dft.relaxTransitGroupPriority().toString());
+
+    if (relaxTransitGroupPriorityValue != null) {
+      builder.withRelaxTransitGroupPriority(CostLinearFunction.of(relaxTransitGroupPriorityValue));
+    }
+
+    // TODO REMOVE THIS
+    builder.withRaptor(it ->
+      c
+        .of("relaxTransitSearchGeneralizedCostAtDestination")
+        .since(V2_3)
+        .summary("Whether non-optimal transit paths at the destination should be returned")
+        .description(
+          """
                 Let c be the existing minimum pareto optimal generalized cost to beat. Then a trip
                 with cost c' is accepted if the following is true:
                 `c' < Math.round(c * relaxRaptorCostCriteria)`.
-                              
+
                 The parameter is optional. If not set a normal comparison is performed.
-                              
+
                 Values equals or less than zero is not allowed. Values greater than 2.0 are not
                 supported, due to performance reasons.
                 """
-          )
-          .asDoubleOptional()
-          .ifPresent(it::withRelaxGeneralizedCostAtDestination)
-      );
+        )
+        .asDoubleOptional()
+        .ifPresent(it::withRelaxGeneralizedCostAtDestination)
+    );
   }
 
-  private static void mapBikePreferences(NodeAdapter c, BikePreferences.Builder builder) {
+  private static void mapBikePreferences(NodeAdapter root, BikePreferences.Builder builder) {
     var dft = builder.original();
+    NodeAdapter c = root.of("bicycle").since(V2_5).summary("Bicycle preferences.").asObject();
     builder
       .withSpeed(
         c
-          .of("bikeSpeed")
+          .of("speed")
           .since(V2_0)
-          .summary("Max bike speed along streets, in meters per second")
+          .summary("Max bicycle speed along streets, in meters per second")
           .asDouble(dft.speed())
       )
       .withReluctance(
         c
-          .of("bikeReluctance")
+          .of("reluctance")
           .since(V2_0)
           .summary(
-            "A multiplier for how bad biking is, compared to being in transit for equal lengths of time."
+            "A multiplier for how bad cycling is, compared to being in transit for equal lengths of time."
           )
           .asDouble(dft.reluctance())
       )
       .withBoardCost(
         c
-          .of("bikeBoardCost")
+          .of("boardCost")
           .since(V2_0)
-          .summary("Prevents unnecessary transfers by adding a cost for boarding a vehicle.")
+          .summary(
+            "Prevents unnecessary transfers by adding a cost for boarding a transit vehicle."
+          )
           .description(
-            "This is the cost that is used when boarding while cycling." +
+            "This is the cost that is used when boarding while cycling. " +
             "This is usually higher that walkBoardCost."
           )
           .asInt(dft.boardCost())
       )
-      .withParkTime(
-        c.of("bikeParkTime").since(V2_0).summary("Time to park a bike.").asInt(dft.parkTime())
-      )
-      .withParkCost(
-        c.of("bikeParkCost").since(V2_0).summary("Cost to park a bike.").asInt(dft.parkCost())
-      )
-      .withWalkingSpeed(
-        c
-          .of("bikeWalkingSpeed")
-          .since(V2_1)
-          .summary(
-            "The user's bike walking speed in meters/second. Defaults to approximately 3 MPH."
-          )
-          .asDouble(dft.walkingSpeed())
-      )
-      .withWalkingReluctance(
-        c
-          .of("bikeWalkingReluctance")
-          .since(V2_1)
-          .summary(
-            "A multiplier for how bad walking with a bike is, compared to being in transit for equal lengths of time."
-          )
-          .asDouble(dft.walkingReluctance())
-      )
-      .withSwitchTime(
-        c
-          .of("bikeSwitchTime")
-          .since(V2_0)
-          .summary("The time it takes the user to fetch their bike and park it again in seconds.")
-          .asInt(dft.switchTime())
-      )
-      .withSwitchCost(
-        c
-          .of("bikeSwitchCost")
-          .since(V2_0)
-          .summary("The cost of the user fetching their bike and parking it again.")
-          .asInt(dft.switchCost())
-      )
       .withOptimizeType(
         c
-          .of("optimize")
+          .of("optimization")
           .since(V2_0)
           .summary("The set of characteristics that the user wants to optimize for.")
+          .description(
+            "If the triangle optimization is used, it's enough to just define the triangle parameters"
+          )
           .asEnum(dft.optimizeType())
       )
-      .withOptimizeTriangle(it ->
-        it
-          .withTime(
-            c
-              .of("bikeTriangleTimeFactor")
-              .since(V2_0)
-              .summary("For bike triangle routing, how much time matters (range 0-1).")
-              .asDouble(it.time())
-          )
-          .withSlope(
-            c
-              .of("bikeTriangleSlopeFactor")
-              .since(V2_0)
-              .summary("For bike triangle routing, how much slope matters (range 0-1).")
-              .asDouble(it.slope())
-          )
-          .withSafety(
-            c
-              .of("bikeTriangleSafetyFactor")
-              .since(V2_0)
-              .summary("For bike triangle routing, how much safety matters (range 0-1).")
-              .asDouble(it.safety())
-          )
-      )
-      .withStairsReluctance(
-        c
-          .of("bikeStairsReluctance")
-          .since(V2_3)
-          .summary(
-            "How bad is it to walk the bicycle up/down a flight of stairs compared to taking a detour."
-          )
-          .asDouble(dft.stairsReluctance())
-      );
-  }
-
-  private static void mapRentalPreferences(
-    NodeAdapter c,
-    VehicleRentalPreferences.Builder builder
-  ) {
-    var dft = builder.original();
-    builder
-      .withDropoffCost(
-        c
-          .of("bikeRentalDropoffCost")
-          .since(V2_0)
-          .summary("Cost to drop-off a rented bike.")
-          .asInt(dft.dropoffCost())
-      )
-      .withDropoffTime(
-        c
-          .of("bikeRentalDropoffTime")
-          .since(V2_0)
-          .summary("Time to drop-off a rented bike.")
-          .asInt(dft.dropoffTime())
-      )
-      .withPickupCost(
-        c
-          .of("bikeRentalPickupCost")
-          .since(V2_0)
-          .summary("Cost to rent a bike.")
-          .asInt(dft.pickupCost())
-      )
-      .withPickupTime(
-        c
-          .of("bikeRentalPickupTime")
-          .since(V2_0)
-          .summary("Time to rent a bike.")
-          .asInt(dft.pickupTime())
-      )
-      .withUseAvailabilityInformation(
-        c
-          .of("useBikeRentalAvailabilityInformation")
-          .since(V2_0)
-          .summary(
-            "Whether or not bike rental availability information will be used to plan bike rental trips."
-          )
-          .asBoolean(dft.useAvailabilityInformation())
-      )
-      .withArrivingInRentalVehicleAtDestinationCost(
-        c
-          .of("keepingRentedBicycleAtDestinationCost")
-          .since(V2_2)
-          .summary(
-            "The cost of arriving at the destination with the rented bicycle, to discourage doing so."
-          )
-          .asDouble(dft.arrivingInRentalVehicleAtDestinationCost())
-      );
+      // triangle overrides the optimization type if defined
+      .withForcedOptimizeTriangle(it -> mapOptimizationTriangle(c, it))
+      .withWalking(it -> mapVehicleWalking(c, it))
+      .withParking(it -> mapParking(c, it))
+      .withRental(it -> mapRental(c, it));
   }
 
   private static void mapStreetPreferences(NodeAdapter c, StreetPreferences.Builder builder) {
     var dft = builder.original();
+    NodeAdapter cae = c
+      .of("accessEgress")
+      .since(V2_4)
+      .summary("Parameters for access and egress routing.")
+      .asObject();
+
     builder
       .withTurnReluctance(
         c
@@ -604,33 +444,90 @@ ferries, where the check-in process needs to be done in good time before ride.
               .asInt(dftElevator.hopTime())
           );
       })
-      .withMaxAccessEgressDuration(
-        c
-          .of("maxAccessEgressDuration")
-          .since(V2_1)
-          .summary("This is the maximum duration for access/egress for street searches.")
-          .description(
-            """
+      .withAccessEgress(accessEgress -> {
+        var dftAccessEgress = dft.accessEgress();
+        accessEgress
+          .withPenalty(
+            // The default value is NO-PENALTY and is not configurable
+            cae
+              .of("penalty")
+              .since(V2_4)
+              .summary("Penalty for access/egress by street mode.")
+              .description(
+                """
+            Use this to add a time and cost penalty to an access/egress legs for a given street
+            mode. This will favour other street-modes and transit. This has a performance penalty,
+            since the search-window is increased with the same amount as the maximum penalty for
+            the access legs used. In other cases where the access(CAR) is faster than transit the
+            performance will be better.
+
+            The default values are
+            
+            %s
+
+            Example: `"car-to-park" : { "timePenalty": "10m + 1.5t", "costFactor": 2.5 }`
+
+            **Time penalty**
+
+            The `timePenalty` is used to add a penalty to the access/egress duration/time. The
+            time including the penalty is used in the algorithm when comparing paths, but the
+            actual duration is used when presented to the end user.
+
+            **Cost factor**
+
+            The `costFactor` is used to add an additional cost to the leg´s  generalized-cost. The
+            time-penalty is multiplied with the cost-factor. A cost-factor of zero, gives no
+            extra cost, while 1.0 will add the same amount to both time and cost.
+            """.formatted(
+                    formatPenaltyDefaultValues(dftAccessEgress)
+                  )
+              )
+              .asEnumMap(
+                StreetMode.class,
+                TimeAndCostPenaltyMapper::map,
+                dftAccessEgress.penalty().asEnumMap()
+              )
+          )
+          .withMaxDuration(
+            cae
+              .of("maxDuration")
+              .since(V2_1)
+              .summary("This is the maximum duration for access/egress for street searches.")
+              .description(
+                """
 This is a performance limit and should therefore be set high. Results close to the limit are not
 guaranteed to be optimal. Use itinerary-filters to limit what is presented to the client. The
-duration can be set per mode(`maxAccessEgressDurationForMode`), because some street modes searches
+duration can be set per mode(`maxDurationForMode`), because some street modes searches
 are much more resource intensive than others. A default value is applied if the mode specific value
 do not exist.
 """
+              )
+              .asDuration(dftAccessEgress.maxDuration().defaultValue()),
+            cae
+              .of("maxDurationForMode")
+              .since(V2_1)
+              .summary("Limit access/egress per street mode.")
+              .description(
+                """
+              Override the settings in `maxDuration` for specific street modes. This is
+              done because some street modes searches are much more resource intensive than others.
+              """
+              )
+              .asEnumMap(StreetMode.class, Duration.class)
           )
-          .asDuration(dft.maxAccessEgressDuration().defaultValue()),
-        c
-          .of("maxAccessEgressDurationForMode")
-          .since(V2_1)
-          .summary("Limit access/egress per street mode.")
-          .description(
-            """
-            Override the settings in `maxAccessEgressDuration` for specific street modes. This is
-            done because some street modes searches are much more resource intensive than others.
-            """
-          )
-          .asEnumMap(StreetMode.class, Duration.class)
-      )
+          .withMaxStopCount(
+            cae
+              .of("maxStopCount")
+              .since(V2_4)
+              .summary("Maximal number of stops collected in access/egress routing")
+              .description(
+                """
+              Safety limit to prevent access to and egress from too many stops.
+              """
+              )
+              .asInt(dftAccessEgress.maxStopCount())
+          );
+      })
       .withMaxDirectDuration(
         c
           .of("maxDirectStreetDuration")
@@ -664,71 +561,116 @@ do not exist."
           .since(V2_2)
           .summary("The model that computes the costs of turns.")
           .asEnum(dft.intersectionTraversalModel())
+      )
+      .withRoutingTimeout(
+        c
+          .of("streetRoutingTimeout")
+          .since(V2_2)
+          .summary(
+            "The maximum time a street routing request is allowed to take before returning the " +
+            "results."
+          )
+          .description(
+            """
+The street search(AStar) aborts after this duration and any paths found are returned to the client.
+The street part of the routing may take a long time if searching very long distances. You can set
+the street routing timeout to avoid tying up server resources on pointless searches and ensure that
+your users receive a timely response. You can also limit the max duration. There are is also a
+'apiProcessingTimeout'. Make sure the street timeout is less than the 'apiProcessingTimeout'.
+            """
+          )
+          .asDuration(dft.routingTimeout())
       );
   }
 
-  private static void mapCarPreferences(NodeAdapter c, CarPreferences.Builder builder) {
+  private static String formatPenaltyDefaultValues(AccessEgressPreferences dftAccessEgress) {
+    return dftAccessEgress
+      .penalty()
+      .asEnumMap()
+      .entrySet()
+      .stream()
+      .map(s -> "- `%s` = %s".formatted(StringUtils.kebabCase(s.getKey().toString()), s.getValue()))
+      .collect(Collectors.joining("\n"));
+  }
+
+  private static void mapCarPreferences(NodeAdapter root, CarPreferences.Builder builder) {
     var dft = builder.original();
+    NodeAdapter c = root.of("car").since(V2_5).summary("Car preferences.").asObject();
     builder
-      .withSpeed(
-        c
-          .of("carSpeed")
-          .since(V2_0)
-          .summary("Max car speed along streets, in meters per second")
-          .asDouble(dft.speed())
-      )
       .withReluctance(
         c
-          .of("carReluctance")
+          .of("reluctance")
           .since(V2_0)
           .summary(
             "A multiplier for how bad driving is, compared to being in transit for equal lengths of time."
           )
           .asDouble(dft.reluctance())
       )
-      .withDropoffTime(
-        c
-          .of("carDropoffTime")
-          .since(V2_0)
-          .summary(
-            "Time to park a car in a park and ride, w/o taking into account driving and walking cost."
-          )
-          .asInt(dft.dropoffTime())
-      )
-      .withParkCost(
-        c.of("carParkCost").since(V2_1).summary("Cost of parking a car.").asInt(dft.parkCost())
-      )
-      .withParkTime(
-        c.of("carParkTime").since(V2_1).summary("Time to park a car").asInt(dft.parkTime())
-      )
       .withPickupCost(
         c
-          .of("carPickupCost")
+          .of("pickupCost")
           .since(V2_1)
           .summary("Add a cost for car pickup changes when a pickup or drop off takes place")
-          .asInt(dft.pickupCost())
+          .asInt(dft.pickupCost().toSeconds())
       )
       .withPickupTime(
         c
-          .of("carPickupTime")
+          .of("pickupTime")
           .since(V2_1)
           .summary("Add a time for car pickup changes when a pickup or drop off takes place")
-          .asInt(dft.pickupTime())
+          .asDuration(dft.pickupTime())
       )
       .withAccelerationSpeed(
         c
-          .of("carAccelerationSpeed")
+          .of("accelerationSpeed")
           .since(V2_0)
           .summary("The acceleration speed of an automobile, in meters per second per second.")
           .asDouble(dft.accelerationSpeed())
       )
       .withDecelerationSpeed(
         c
-          .of("carDecelerationSpeed")
+          .of("decelerationSpeed")
           .since(V2_0)
           .summary("The deceleration speed of an automobile, in meters per second per second.")
           .asDouble(dft.decelerationSpeed())
-      );
+      )
+      .withParking(it -> mapParking(c, it))
+      .withRental(it -> mapRental(c, it));
+  }
+
+  private static void mapScooterPreferences(NodeAdapter root, ScooterPreferences.Builder builder) {
+    var dft = builder.original();
+    NodeAdapter c = root.of("scooter").since(V2_5).summary("Scooter preferences.").asObject();
+    builder
+      .withSpeed(
+        c
+          .of("speed")
+          .since(V2_0)
+          .summary("Max scooter speed along streets, in meters per second")
+          .asDouble(dft.speed())
+      )
+      .withReluctance(
+        c
+          .of("reluctance")
+          .since(V2_0)
+          .summary(
+            "A multiplier for how bad scooter travel is, compared to being in transit for equal lengths of time."
+          )
+          .asDouble(dft.reluctance())
+      )
+      .withOptimizeType(
+        c
+          .of("optimization")
+          .since(V2_0)
+          .summary("The set of characteristics that the user wants to optimize for.")
+          .description(
+            "If the triangle optimization is used, it's enough to just define the triangle parameters"
+          )
+          .asEnum(dft.optimizeType())
+      )
+      // triangle overrides the optimization type if defined
+      .withForcedOptimizeTriangle(it -> mapOptimizationTriangle(c, it))
+      .withRental(it -> mapRental(c, it));
   }
 
   private static void mapSystemPreferences(NodeAdapter c, SystemPreferences.Builder builder) {
@@ -779,19 +721,20 @@ search, hence, making it a bit slower. Recommended values would be from 12 hours
     }
   }
 
-  private static void mapWalkPreferences(NodeAdapter c, WalkPreferences.Builder walk) {
+  private static void mapWalkPreferences(NodeAdapter root, WalkPreferences.Builder walk) {
     var dft = walk.original();
+    NodeAdapter c = root.of("walk").since(V2_5).summary("Walking preferences.").asObject();
     walk
       .withSpeed(
         c
-          .of("walkSpeed")
+          .of("speed")
           .since(V2_0)
           .summary("The user's walking speed in meters/second.")
           .asDouble(dft.speed())
       )
       .withReluctance(
         c
-          .of("walkReluctance")
+          .of("reluctance")
           .since(V2_0)
           .summary(
             "A multiplier for how bad walking is, compared to being in transit for equal lengths of time."
@@ -809,7 +752,7 @@ high values.
       )
       .withBoardCost(
         c
-          .of("walkBoardCost")
+          .of("boardCost")
           .since(V2_0)
           .summary(
             """
@@ -843,13 +786,22 @@ high values.
       )
       .withSafetyFactor(
         c
-          .of("walkSafetyFactor")
+          .of("safetyFactor")
           .since(V2_2)
           .summary("Factor for how much the walk safety is considered in routing.")
           .description(
             "Value should be between 0 and 1." + " If the value is set to be 0, safety is ignored."
           )
           .asDouble(dft.safetyFactor())
+      )
+      .withEscalatorReluctance(
+        c
+          .of("escalatorReluctance")
+          .since(V2_4)
+          .summary(
+            "A multiplier for how bad being in an escalator is compared to being in transit for equal lengths of time"
+          )
+          .asDouble(dft.escalatorReluctance())
       );
   }
 }

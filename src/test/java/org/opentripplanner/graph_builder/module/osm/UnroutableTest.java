@@ -2,26 +2,21 @@ package org.opentripplanner.graph_builder.module.osm;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-import java.io.File;
-import java.net.URL;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.opentripplanner.astar.model.GraphPath;
 import org.opentripplanner.astar.model.ShortestPathTree;
-import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
-import org.opentripplanner.openstreetmap.OpenStreetMapProvider;
+import org.opentripplanner.openstreetmap.OsmProvider;
 import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.routing.api.request.StreetMode;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.street.model.edge.Edge;
 import org.opentripplanner.street.model.vertex.Vertex;
+import org.opentripplanner.street.model.vertex.VertexLabel;
 import org.opentripplanner.street.search.StreetSearchBuilder;
 import org.opentripplanner.street.search.state.State;
 import org.opentripplanner.street.search.strategy.EuclideanRemainingWeightHeuristic;
+import org.opentripplanner.test.support.ResourceLoader;
 import org.opentripplanner.transit.model.framework.Deduplicator;
 
 /**
@@ -40,16 +35,9 @@ public class UnroutableTest {
     var deduplicator = new Deduplicator();
     graph = new Graph(deduplicator);
 
-    URL osmDataUrl = getClass().getResource("bridge_construction.osm.pbf");
-    File osmDataFile = new File(URLDecoder.decode(osmDataUrl.getFile(), StandardCharsets.UTF_8));
-    OpenStreetMapProvider provider = new OpenStreetMapProvider(osmDataFile, true);
-    OpenStreetMapModule osmBuilder = new OpenStreetMapModule(
-      List.of(provider),
-      Set.of(),
-      graph,
-      DataImportIssueStore.NOOP,
-      true
-    );
+    var osmDataFile = ResourceLoader.of(UnroutableTest.class).file("bridge_construction.osm.pbf");
+    OsmProvider provider = new OsmProvider(osmDataFile, true);
+    OsmModule osmBuilder = OsmModule.of(provider, graph).withAreaVisibility(true).build();
     osmBuilder.buildGraph();
   }
 
@@ -63,8 +51,8 @@ public class UnroutableTest {
     RouteRequest options = new RouteRequest();
     options.journey().direct().setMode(StreetMode.BIKE);
 
-    Vertex from = graph.getVertex("osm:node:2003617278");
-    Vertex to = graph.getVertex("osm:node:40446276");
+    Vertex from = graph.getVertex(VertexLabel.osm(2003617278));
+    Vertex to = graph.getVertex(VertexLabel.osm(40446276));
     ShortestPathTree<State, Edge, Vertex> spt = StreetSearchBuilder
       .of()
       .setHeuristic(new EuclideanRemainingWeightHeuristic())

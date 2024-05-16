@@ -1,6 +1,7 @@
 package org.opentripplanner.street.model.edge;
 
 import java.util.List;
+import javax.annotation.Nonnull;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.LineString;
 import org.opentripplanner.framework.geometry.GeometryUtils;
@@ -25,12 +26,19 @@ public class ElevatorBoardEdge extends Edge implements BikeWalkableEdge, Elevato
    */
   private final LineString geometry;
 
-  public ElevatorBoardEdge(ElevatorOffboardVertex from, ElevatorOnboardVertex to) {
+  private ElevatorBoardEdge(ElevatorOffboardVertex from, ElevatorOnboardVertex to) {
     super(from, to);
     geometry =
       GeometryUtils.makeLineString(
         List.of(new Coordinate(from.getX(), from.getY()), new Coordinate(to.getX(), to.getY()))
       );
+  }
+
+  public static ElevatorBoardEdge createElevatorBoardEdge(
+    ElevatorOffboardVertex from,
+    ElevatorOnboardVertex to
+  ) {
+    return connectToGraph(new ElevatorBoardEdge(from, to));
   }
 
   @Override
@@ -39,10 +47,11 @@ public class ElevatorBoardEdge extends Edge implements BikeWalkableEdge, Elevato
   }
 
   @Override
-  public State traverse(State s0) {
+  @Nonnull
+  public State[] traverse(State s0) {
     StateEditor s1 = createEditorForDrivingOrWalking(s0, this);
     if (s1 == null) {
-      return null;
+      return State.empty();
     }
 
     var streetPreferences = s0.getPreferences().street();
@@ -50,7 +59,7 @@ public class ElevatorBoardEdge extends Edge implements BikeWalkableEdge, Elevato
     s1.incrementWeight(streetPreferences.elevator().boardCost());
     s1.incrementTimeInSeconds(streetPreferences.elevator().boardTime());
 
-    return s1.makeState();
+    return s1.makeStateArray();
   }
 
   @Override
@@ -71,10 +80,5 @@ public class ElevatorBoardEdge extends Edge implements BikeWalkableEdge, Elevato
   @Override
   public LineString getGeometry() {
     return geometry;
-  }
-
-  @Override
-  public double getDistanceMeters() {
-    return 0;
   }
 }

@@ -7,7 +7,7 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.opentripplanner.graph_builder.module.StreetLinkerModule;
+import org.opentripplanner.graph_builder.module.TestStreetLinkerModule;
 import org.opentripplanner.model.GenericLocation;
 import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.routing.api.request.StreetMode;
@@ -54,13 +54,14 @@ public class StreetModeLinkingTest extends GraphRoutingTest {
             StreetTraversalPermission.PEDESTRIAN_AND_BICYCLE
           );
 
-          street(
+          streetBuilder(
             intersection("D1", 47.500, 19.03),
             intersection("D2", 47.502, 19.03),
             100,
             StreetTraversalPermission.PEDESTRIAN
           )
-            .setWheelchairAccessible(false);
+            .withWheelchairAccessible(false)
+            .buildAndConnect();
 
           street(
             intersection("E1", 47.500, 19.04),
@@ -76,7 +77,7 @@ public class StreetModeLinkingTest extends GraphRoutingTest {
     graph = otpModel.graph();
 
     graph.hasStreets = true;
-    StreetLinkerModule.linkStreetsForTestOnly(graph, otpModel.transitModel());
+    TestStreetLinkerModule.link(graph, otpModel.transitModel());
   }
 
   @Test

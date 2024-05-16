@@ -1,13 +1,16 @@
 package org.opentripplanner.raptor.api.view;
 
+import java.util.function.IntFunction;
 import javax.annotation.Nullable;
-import org.opentripplanner.framework.lang.OtpNumberFormat;
 import org.opentripplanner.framework.time.TimeUtils;
 import org.opentripplanner.raptor.api.model.PathLegType;
+import org.opentripplanner.raptor.api.model.RaptorConstants;
 import org.opentripplanner.raptor.api.model.RaptorTransfer;
 import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
+import org.opentripplanner.raptor.api.model.RaptorValueFormatter;
 import org.opentripplanner.raptor.api.model.TransitArrival;
 import org.opentripplanner.raptor.spi.RaptorCostCalculator;
+import org.opentripplanner.routing.algorithm.raptoradapter.transit.cost.DefaultCostCalculator;
 
 /**
  * The purpose of the stop-arrival-view is to provide a common interface for stop-arrivals for
@@ -85,7 +88,7 @@ public interface ArrivalView<T extends RaptorTripSchedule> {
    * state with c1 and c2 is created dynamically if c2 is in use, if not this method will
    * throw an exception.
    * <p>
-   * {@link RaptorCostCalculator#ZERO_COST} is returned if no criteria exist, but the model
+   * {@link RaptorConstants#NOT_SET} is returned if no criteria exist, but the model
    * support it.
    */
   int c2();
@@ -149,13 +152,13 @@ public interface ArrivalView<T extends RaptorTripSchedule> {
 
   boolean arrivedOnBoard();
 
-  /** Use this to easy create a to String implementation. */
+  /** Use this to create a {@code toString()} implementation. */
   default String asString() {
     String arrival =
       "[" +
       TimeUtils.timeToStrCompact(arrivalTime()) +
-      " " +
-      OtpNumberFormat.formatCostCenti(c1()) +
+      cost(c1(), DefaultCostCalculator.ZERO_COST, RaptorValueFormatter::formatC1) +
+      cost(c2(), RaptorConstants.NOT_SET, RaptorValueFormatter::formatC2) +
       "]";
     return switch (arrivedBy()) {
       case ACCESS -> String.format(
@@ -186,5 +189,9 @@ public interface ArrivalView<T extends RaptorTripSchedule> {
         egressPath().egress()
       );
     };
+  }
+
+  private static String cost(int cost, int defaultValue, IntFunction<String> toString) {
+    return cost == defaultValue ? "" : " " + toString.apply(cost);
   }
 }

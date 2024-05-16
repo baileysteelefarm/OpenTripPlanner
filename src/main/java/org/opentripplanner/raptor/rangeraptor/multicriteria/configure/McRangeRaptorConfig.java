@@ -1,13 +1,16 @@
 package org.opentripplanner.raptor.rangeraptor.multicriteria.configure;
 
+import java.util.Objects;
 import java.util.function.BiFunction;
 import javax.annotation.Nullable;
 import org.opentripplanner.raptor.api.model.DominanceFunction;
 import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
 import org.opentripplanner.raptor.api.request.MultiCriteriaRequest;
-import org.opentripplanner.raptor.api.request.RaptorTransitPriorityGroupCalculator;
+import org.opentripplanner.raptor.api.request.RaptorTransitGroupCalculator;
 import org.opentripplanner.raptor.rangeraptor.context.SearchContext;
 import org.opentripplanner.raptor.rangeraptor.internalapi.Heuristics;
+import org.opentripplanner.raptor.rangeraptor.internalapi.ParetoSetCost;
+import org.opentripplanner.raptor.rangeraptor.internalapi.PassThroughPointsService;
 import org.opentripplanner.raptor.rangeraptor.internalapi.RaptorWorker;
 import org.opentripplanner.raptor.rangeraptor.internalapi.RaptorWorkerState;
 import org.opentripplanner.raptor.rangeraptor.internalapi.RoutingStrategy;
@@ -20,11 +23,13 @@ import org.opentripplanner.raptor.rangeraptor.multicriteria.arrivals.McStopArriv
 import org.opentripplanner.raptor.rangeraptor.multicriteria.arrivals.c1.StopArrivalFactoryC1;
 import org.opentripplanner.raptor.rangeraptor.multicriteria.arrivals.c2.StopArrivalFactoryC2;
 import org.opentripplanner.raptor.rangeraptor.multicriteria.heuristic.HeuristicsProvider;
+import org.opentripplanner.raptor.rangeraptor.multicriteria.passthrough.BitSetPassThroughPointsService;
 import org.opentripplanner.raptor.rangeraptor.multicriteria.ride.PatternRide;
 import org.opentripplanner.raptor.rangeraptor.multicriteria.ride.PatternRideFactory;
 import org.opentripplanner.raptor.rangeraptor.multicriteria.ride.c1.PatternRideC1;
+import org.opentripplanner.raptor.rangeraptor.multicriteria.ride.c2.PassThroughRideFactory;
 import org.opentripplanner.raptor.rangeraptor.multicriteria.ride.c2.PatternRideC2;
-import org.opentripplanner.raptor.rangeraptor.multicriteria.ride.c2.TransitPriorityGroupRideFactory;
+import org.opentripplanner.raptor.rangeraptor.multicriteria.ride.c2.TransitGroupPriorityRideFactory;
 import org.opentripplanner.raptor.rangeraptor.path.DestinationArrivalPaths;
 import org.opentripplanner.raptor.rangeraptor.path.configure.PathConfig;
 import org.opentripplanner.raptor.util.paretoset.ParetoComparator;
@@ -39,12 +44,27 @@ public class McRangeRaptorConfig<T extends RaptorTripSchedule> {
 
   private final SearchContext<T> context;
   private final PathConfig<T> pathConfig;
-
   private DestinationArrivalPaths<T> paths;
+  private PassThroughPointsService passThroughPointsService;
 
-  public McRangeRaptorConfig(SearchContext<T> context) {
-    this.context = context;
+  public McRangeRaptorConfig(
+    SearchContext<T> context,
+    PassThroughPointsService passThroughPointsService
+  ) {
+    this.context = Objects.requireNonNull(context);
+    this.passThroughPointsService = Objects.requireNonNull(passThroughPointsService);
     this.pathConfig = new PathConfig<>(context);
+  }
+
+  /**
+   * The PassThroughPointsService is injected into the transit-calculator, so it needs to be
+   * created before the context(which create the calculator).So, to be able to do this, this
+   * factory is static, and the service is passed back in when this config is instantiated.
+   */
+  public static PassThroughPointsService passThroughPointsService(
+    MultiCriteriaRequest<?> multiCriteriaRequest
+  ) {
+    return BitSetPassThroughPointsService.of(multiCriteriaRequest.passThroughPoints());
   }
 
   /**
@@ -83,6 +103,7 @@ public class McRangeRaptorConfig<T extends RaptorTripSchedule> {
       state,
       context.createTimeBasedBoardingSupport(),
       factory,
+      passThroughPointsService,
       context.costCalculator(),
       context.slackProvider(),
       createPatternRideParetoSet(patternRideComparator)
@@ -137,7 +158,8 @@ public class McRangeRaptorConfig<T extends RaptorTripSchedule> {
 
   private DestinationArrivalPaths<T> createDestinationArrivalPaths() {
     if (paths == null) {
-      paths = pathConfig.createDestArrivalPathsWithGeneralizedCost();
+      var c2Comp = includeC2() ? dominanceFunctionC2() : null;
+      paths = pathConfig.createDestArrivalPaths(resolveCostConfig(), c2Comp);
     }
     return paths;
   }
@@ -151,27 +173,56 @@ public class McRangeRaptorConfig<T extends RaptorTripSchedule> {
   }
 
   /**
-   * Currently "transit-priority-groups" is the only feature using two multi-criteria(c2).
+   * Use c2 in the search, this is use-case specific. For example the pass-through or
+   * transit-group-priority features uses the c2 value.
    */
   private boolean includeC2() {
-    return mcRequest().transitPriorityCalculator().isPresent();
+    return mcRequest().includeC2();
   }
 
   private PatternRideFactory<T, PatternRideC2<T>> createPatternRideC2Factory() {
-    return new TransitPriorityGroupRideFactory<>(getTransitPriorityGroupCalculator());
+    if (isPassThrough()) {
+      return new PassThroughRideFactory<>(passThroughPointsService);
+    }
+    if (isTransitPriority()) {
+      return new TransitGroupPriorityRideFactory<>(getTransitGroupPriorityCalculator());
+    }
+    throw new IllegalStateException("Only pass-through and transit-priority uses c2.");
   }
 
   @Nullable
   private DominanceFunction dominanceFunctionC2() {
-    // transit-priority-groups is the only feature using two multi-criteria(c2).
-    return mcRequest()
-      .transitPriorityCalculator()
-      .map(RaptorTransitPriorityGroupCalculator::dominanceFunction)
-      .orElse(null);
+    if (isPassThrough()) {
+      return passThroughPointsService.dominanceFunction();
+    }
+    if (isTransitPriority()) {
+      return getTransitGroupPriorityCalculator().dominanceFunction();
+    }
+    return null;
   }
 
-  @Nullable
-  private RaptorTransitPriorityGroupCalculator getTransitPriorityGroupCalculator() {
-    return mcRequest().transitPriorityCalculator().orElse(null);
+  private RaptorTransitGroupCalculator getTransitGroupPriorityCalculator() {
+    return mcRequest().transitPriorityCalculator().orElseThrow();
+  }
+
+  private boolean isPassThrough() {
+    return mcRequest().hasPassThroughPoints();
+  }
+
+  private boolean isTransitPriority() {
+    return mcRequest().transitPriorityCalculator().isPresent();
+  }
+
+  private ParetoSetCost resolveCostConfig() {
+    if (isTransitPriority()) {
+      return ParetoSetCost.USE_C1_RELAXED_IF_C2_IS_OPTIMAL;
+    }
+    if (isPassThrough()) {
+      return ParetoSetCost.USE_C1_AND_C2;
+    }
+    if (context.multiCriteria().relaxCostAtDestination() != null) {
+      return ParetoSetCost.USE_C1_RELAX_DESTINATION;
+    }
+    return ParetoSetCost.USE_C1;
   }
 }

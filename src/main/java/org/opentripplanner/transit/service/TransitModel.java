@@ -376,13 +376,6 @@ public class TransitModel implements Serializable {
   }
 
   /**
-   * Return a transit stop, a flex stop location or flex stop location group.
-   */
-  public StopLocation getStopLocationById(FeedScopedId id) {
-    return stopModel.getStopLocation(id);
-  }
-
-  /**
    * Map from GTFS ServiceIds to integers close to 0. Allows using BitSets instead of
    * {@code Set<Object>}. An empty Map is created before the Graph is built to allow registering IDs
    * from multiple feeds.
@@ -463,9 +456,9 @@ public class TransitModel implements Serializable {
   /**
    * Updating the stop model is only allowed during graph build
    */
-  public void mergeStopModels(StopModel newStopModel) {
+  public void mergeStopModels(StopModel childStopModel) {
     invalidateIndex();
-    this.stopModel = this.stopModel.copy().addAll(newStopModel).build();
+    this.stopModel = this.stopModel.merge(childStopModel);
   }
 
   public void addFlexTrip(FeedScopedId id, FlexTrip<?, ?> flexTrip) {

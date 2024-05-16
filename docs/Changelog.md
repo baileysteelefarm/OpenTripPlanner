@@ -3,9 +3,161 @@
 The changelog lists most feature changes between each release. The list is automatically created
 based on merged pull requests. Search GitHub issues and pull requests for smaller issues.
 
-## 2.4.0 (in progress)
+## 2.6.0-SNAPSHOT (under development)
 
 [](AUTOMATIC_CHANGELOG_PLACEHOLDER_DO_NOT_REMOVE)
+
+## 2.5.0 (2024-03-13)
+
+### Notable Changes
+
+- Make GTFS GraphQL API an official API [#5339](https://github.com/opentripplanner/OpenTripPlanner/pull/5339)
+- Make Transmodel GraphQl API an official API [#5573](https://github.com/opentripplanner/OpenTripPlanner/pull/5573), [#5637](https://github.com/opentripplanner/OpenTripPlanner/pull/5637)
+- Deprecate REST API [#5580](https://github.com/opentripplanner/OpenTripPlanner/pull/5580)
+- Transit group priority [#4999](https://github.com/opentripplanner/OpenTripPlanner/pull/4999), [#5583](https://github.com/opentripplanner/OpenTripPlanner/pull/5583), [#5638](https://github.com/opentripplanner/OpenTripPlanner/pull/5638)
+- Transmodel GraphQL API for pass-through searches [#5320](https://github.com/opentripplanner/OpenTripPlanner/pull/5320)
+- Migrate to Java 21 [#5421](https://github.com/opentripplanner/OpenTripPlanner/pull/5421)
+- New debug client [#5334](https://github.com/opentripplanner/OpenTripPlanner/pull/5334)
+- Update to latest GTFS Flex spec draft [#5564](https://github.com/opentripplanner/OpenTripPlanner/pull/5564), [#5655](https://github.com/opentripplanner/OpenTripPlanner/pull/5655)
+- Restructure walk/bicycle/car preferences in router-config.json [#5582](https://github.com/opentripplanner/OpenTripPlanner/pull/5582)
+
+### Detailed changes by Pull Request
+
+- Gracefully handle nullable fields in TransitAlert [#5349](https://github.com/opentripplanner/OpenTripPlanner/pull/5349)
+- Remove transit with higher cost than best on-street itinerary filter [#5222](https://github.com/opentripplanner/OpenTripPlanner/pull/5222)
+- Remove `banDiscouragedCycling` and `banDiscouragedWalking` [#5341](https://github.com/opentripplanner/OpenTripPlanner/pull/5341)
+- Fix rental scooter access [#5361](https://github.com/opentripplanner/OpenTripPlanner/pull/5361)
+- De-duplicate stops returned by `stopsByRadius` [#5366](https://github.com/opentripplanner/OpenTripPlanner/pull/5366)
+- Fix value mapping for `bikesAllowed` in GTFS GraphQL API [#5368](https://github.com/opentripplanner/OpenTripPlanner/pull/5368)
+- Apply correct traversal permissions to barrier vertex [#5369](https://github.com/opentripplanner/OpenTripPlanner/pull/5369)
+- Fix check for OSM relation members not being present in the extract [#5379](https://github.com/opentripplanner/OpenTripPlanner/pull/5379)
+- Add a configurable limit for the search window [#5293](https://github.com/opentripplanner/OpenTripPlanner/pull/5293)
+- Fix board slack list mapping in Transmodel API [#5420](https://github.com/opentripplanner/OpenTripPlanner/pull/5420)
+- Fix flexible quay querying in Transmodel API [#5417](https://github.com/opentripplanner/OpenTripPlanner/pull/5417)
+- Add validation for missing calls in SIRI update [#5403](https://github.com/opentripplanner/OpenTripPlanner/pull/5403)
+- Import Occupancy Status from GTFS-RT Vehicle Positions [#5372](https://github.com/opentripplanner/OpenTripPlanner/pull/5372)
+- Allow multiple zones in an unscheduled flex trip [#5376](https://github.com/opentripplanner/OpenTripPlanner/pull/5376)
+- Filter out null, empty and blank elements when mapping feed-scoped ids [#5428](https://github.com/opentripplanner/OpenTripPlanner/pull/5428)
+- Validate stop id in Transit leg reference [#5440](https://github.com/opentripplanner/OpenTripPlanner/pull/5440)
+- Add available types and spaces to `VehicleRentalStation` [#5425](https://github.com/opentripplanner/OpenTripPlanner/pull/5425)
+- Make vehicleRentalStation query optionally accept id without feed [#5411](https://github.com/opentripplanner/OpenTripPlanner/pull/5411)
+- Add stricter validation for flex areas [#5457](https://github.com/opentripplanner/OpenTripPlanner/pull/5457)
+- Remove HTTPS handling and its documentation [#5439](https://github.com/opentripplanner/OpenTripPlanner/pull/5439)
+- Add support for DSJ in transit leg reference [#5455](https://github.com/opentripplanner/OpenTripPlanner/pull/5455)
+- Fix sort order bug in optimized transfers [#5446](https://github.com/opentripplanner/OpenTripPlanner/pull/5446)
+- SIRI file loader [#5460](https://github.com/opentripplanner/OpenTripPlanner/pull/5460)
+- Calculate CO₂ emissions of itineraries [#5278](https://github.com/opentripplanner/OpenTripPlanner/pull/5278)
+- Interpolate increasing stop times for GTFS-RT cancelled trips [#5348](https://github.com/opentripplanner/OpenTripPlanner/pull/5348)
+- Remove itineraries outside the search window in arriveBy search [#5433](https://github.com/opentripplanner/OpenTripPlanner/pull/5433)
+- Add back walk reluctance in Transmodel API [#5471](https://github.com/opentripplanner/OpenTripPlanner/pull/5471)
+- Improve linking of fixed stops used by flex trips [#5503](https://github.com/opentripplanner/OpenTripPlanner/pull/5503)
+- Keep min transfer filter is not local to group-by-filters [#5436](https://github.com/opentripplanner/OpenTripPlanner/pull/5436)
+- Add paging deduplication when cropping [#5458](https://github.com/opentripplanner/OpenTripPlanner/pull/5458)
+- Check transport mode when mapping GroupStops [#5518](https://github.com/opentripplanner/OpenTripPlanner/pull/5518)
+- Transfer cost limit [#5516](https://github.com/opentripplanner/OpenTripPlanner/pull/5516)
+- Fix missed trip when arrive-by search-window is off by one minute [#5520](https://github.com/opentripplanner/OpenTripPlanner/pull/5520)
+- Remove `matchBusRoutesToStreets` [#5523](https://github.com/opentripplanner/OpenTripPlanner/pull/5523)
+- Add same submode in alternative legs filter [#5548](https://github.com/opentripplanner/OpenTripPlanner/pull/5548)
+- Fix issue where stop points are sometimes added twice to index [#5552](https://github.com/opentripplanner/OpenTripPlanner/pull/5552)
+- Improve shutdown logic [#5514](https://github.com/opentripplanner/OpenTripPlanner/pull/5514)
+- Create TripOnServiceDate for new SIRI real-time servicejourneys [#5542](https://github.com/opentripplanner/OpenTripPlanner/pull/5542)
+- Improve paging - avoid duplicates and missed itineraries when paging [#5551](https://github.com/opentripplanner/OpenTripPlanner/pull/5551)
+- Add option to include stations in `nearest` search [#5390](https://github.com/opentripplanner/OpenTripPlanner/pull/5390)
+- Report NO_TRANSIT_CONNECTION when search-window is set [#5570](https://github.com/opentripplanner/OpenTripPlanner/pull/5570)
+- Fix preference cost comparisons [#5586](https://github.com/opentripplanner/OpenTripPlanner/pull/5586)
+- Consider escalator edges in island pruning [#5591](https://github.com/opentripplanner/OpenTripPlanner/pull/5591)
+- Adding situation-version to TransmodelGraphQL API [#5592](https://github.com/opentripplanner/OpenTripPlanner/pull/5592)
+- Fix high walk reluctance leading to zero egress results for rental searches [#5605](https://github.com/opentripplanner/OpenTripPlanner/pull/5605)
+- Remove GTFS-RT websocket updater [#5604](https://github.com/opentripplanner/OpenTripPlanner/pull/5604)
+- Use fallback timezone if no transit data is loaded [#4652](https://github.com/opentripplanner/OpenTripPlanner/pull/4652)
+- Add new path for GTFS GraphQL API, remove batch feature [#5581](https://github.com/opentripplanner/OpenTripPlanner/pull/5581)
+- Remove `FareComponent` [#5613](https://github.com/opentripplanner/OpenTripPlanner/pull/5613)
+- Add flexibleArea to GroupStop Quays [#5625](https://github.com/opentripplanner/OpenTripPlanner/pull/5625)
+- Introduce `generalizedCostPlusPenalty` to make cost comparison fairer [#5483](https://github.com/opentripplanner/OpenTripPlanner/pull/5483)
+- Separate walk time from non-transit time [#5648](https://github.com/opentripplanner/OpenTripPlanner/pull/5648)
+- Remove "fare" [#5645](https://github.com/opentripplanner/OpenTripPlanner/pull/5645)
+- Remove `VehicleToStopHeuristics` [#5381](https://github.com/opentripplanner/OpenTripPlanner/pull/5381)
+- Set defaults of the modes WALK, even if one and not the others are set [#5675](https://github.com/opentripplanner/OpenTripPlanner/pull/5675)
+- Reduce flex default access/egress penalty [#5674](https://github.com/opentripplanner/OpenTripPlanner/pull/5674)
+- Add scooter preferences [#5632](https://github.com/opentripplanner/OpenTripPlanner/pull/5632)
+- Use NeTEx authority short name if name is not present [#5698](https://github.com/opentripplanner/OpenTripPlanner/pull/5698)
+- Add Hamburg OSM mapper [#5701](https://github.com/opentripplanner/OpenTripPlanner/pull/5701)
+- Remove configurable car speed and determine it in graph build [#5657](https://github.com/opentripplanner/OpenTripPlanner/pull/5657)
+- Avoid cumulative real-time updates [#5705](https://github.com/opentripplanner/OpenTripPlanner/pull/5705)
+- Fix time penalty [#5715](https://github.com/opentripplanner/OpenTripPlanner/pull/5715)
+- Fix world envelope builder when crossing Greenwich meridian [#5731](https://github.com/opentripplanner/OpenTripPlanner/pull/5731)
+
+## 2.4.0 (2023-09-13)
+
+### Notable Changes
+
+- Improved support for Fares V2 [#4917](https://github.com/opentripplanner/OpenTripPlanner/pull/4917) [#5227](https://github.com/opentripplanner/OpenTripPlanner/pull/5227) 
+- Improved error and timeout handling [#5047](https://github.com/opentripplanner/OpenTripPlanner/pull/5047) [#5092](https://github.com/opentripplanner/OpenTripPlanner/pull/5092) [#5121](https://github.com/opentripplanner/OpenTripPlanner/pull/5121) [#5114](https://github.com/opentripplanner/OpenTripPlanner/pull/5114) [#5133](https://github.com/opentripplanner/OpenTripPlanner/pull/5133) [#5130](https://github.com/opentripplanner/OpenTripPlanner/pull/5130) [#5192](https://github.com/opentripplanner/OpenTripPlanner/pull/5192)
+- Enable GTFS GraphQL API by default, remove the word "legacy" from its name and documentation [#5202](https://github.com/opentripplanner/OpenTripPlanner/pull/5202)
+- Access and egress penalty on time and cost [#5180](https://github.com/opentripplanner/OpenTripPlanner/pull/5180)
+- Improve support for GBFS geofencing zones [#5201](https://github.com/opentripplanner/OpenTripPlanner/pull/5201)
+- Reduce memory consumption by 5-8% [#5223](https://github.com/opentripplanner/OpenTripPlanner/pull/5223)
+- Stop count limit for access/egress routing and new accessEgress configuration object [#5214](https://github.com/opentripplanner/OpenTripPlanner/pull/5214)
+
+### Detailed changes by Pull Request
+
+- Generate static documentation for GTFS GraphQL API [#5069](https://github.com/opentripplanner/OpenTripPlanner/pull/5069)
+- Create a valid area even when it has too many vertices [#5019](https://github.com/opentripplanner/OpenTripPlanner/pull/5019)
+- Constant speed street routing [#5057](https://github.com/opentripplanner/OpenTripPlanner/pull/5057)
+- Remove dead build configuration parameter (extraEdgesStopPlatformLink) [#5080](https://github.com/opentripplanner/OpenTripPlanner/pull/5080)
+- Configure HTTP WebServer Transaction timeouts [#5047](https://github.com/opentripplanner/OpenTripPlanner/pull/5047)
+- Improve Graph updaters shutdown [#5092](https://github.com/opentripplanner/OpenTripPlanner/pull/5092)
+- Fix flex timeshift [#5063](https://github.com/opentripplanner/OpenTripPlanner/pull/5063)
+- Merge norway traversal calculator into default [#5106](https://github.com/opentripplanner/OpenTripPlanner/pull/5106)
+- Use correct GTFS sequence number in vehicle position matcher [#5090](https://github.com/opentripplanner/OpenTripPlanner/pull/5090)
+- OSM: Break out of processing a malformed level map [#5096](https://github.com/opentripplanner/OpenTripPlanner/pull/5096)
+- Handle JsonParseException [#5121](https://github.com/opentripplanner/OpenTripPlanner/pull/5121)
+- Do not enforce API processing timeout for parallel routing [#5114](https://github.com/opentripplanner/OpenTripPlanner/pull/5114)
+- Rename bikeRental options to vehicleRental [#5089](https://github.com/opentripplanner/OpenTripPlanner/pull/5089)
+- Fare sandbox cleanup, remove MultipleFareService [#5100](https://github.com/opentripplanner/OpenTripPlanner/pull/5100)
+- Add validation of NeTEx timetabled passing times [#5081](https://github.com/opentripplanner/OpenTripPlanner/pull/5081)
+- Return WALKING_BETTER_THAN_TRANSIT only on a fully walking leg [#5091](https://github.com/opentripplanner/OpenTripPlanner/pull/5091)
+- Handle CoercingParseValueException [#5133](https://github.com/opentripplanner/OpenTripPlanner/pull/5133)
+- Remove broken Jersey tracing configuration [#5142](https://github.com/opentripplanner/OpenTripPlanner/pull/5142)
+- Graceful timeout error handling [#5130](https://github.com/opentripplanner/OpenTripPlanner/pull/5130)
+- Log http request headers - like correlationId [#5131](https://github.com/opentripplanner/OpenTripPlanner/pull/5131)
+- Fix vertex removal race condition [#5141](https://github.com/opentripplanner/OpenTripPlanner/pull/5141)
+- Comment out replacing DSJ-ID from planned data with ID from real-time-data [#5140](https://github.com/opentripplanner/OpenTripPlanner/pull/5140)
+- Remove San Francisco and vehicle rental fare calculators [#5145](https://github.com/opentripplanner/OpenTripPlanner/pull/5145)
+- Remove batch query from Transmodel API [#5147](https://github.com/opentripplanner/OpenTripPlanner/pull/5147)
+- Fix nullable absolute direction in GTFS GraphQL API [#5159](https://github.com/opentripplanner/OpenTripPlanner/pull/5159)
+- Fix error in flex validation [#5161](https://github.com/opentripplanner/OpenTripPlanner/pull/5161)
+- Check service dates instead of service ids for block id transfers [#5162](https://github.com/opentripplanner/OpenTripPlanner/pull/5162)
+- Add support for mapping NeTEx operating day in operating period [#5167](https://github.com/opentripplanner/OpenTripPlanner/pull/5167)
+- Validate to/from in routing request [#5164](https://github.com/opentripplanner/OpenTripPlanner/pull/5164)
+- Changing default value for earlyStartSec [#5165](https://github.com/opentripplanner/OpenTripPlanner/pull/5165)
+- Add GTFS stop sequence to GTFS GraphQL API [#5153](https://github.com/opentripplanner/OpenTripPlanner/pull/5153)
+- Remove walk leg in a stay seated transfer [#5135](https://github.com/opentripplanner/OpenTripPlanner/pull/5135)
+- Validate distinct from/to temporary vertices [#5181](https://github.com/opentripplanner/OpenTripPlanner/pull/5181)
+- Add support for NeTEx taxi mode [#5183](https://github.com/opentripplanner/OpenTripPlanner/pull/5183)
+- Fix bike triangle in Transmodel API [#5179](https://github.com/opentripplanner/OpenTripPlanner/pull/5179)
+- Bug fixes in stop area relation processing [#5166](https://github.com/opentripplanner/OpenTripPlanner/pull/5166)
+- Allow underscores in GTFS feed IDs [#5191](https://github.com/opentripplanner/OpenTripPlanner/pull/5191)
+- Area vertex linking improvements [#5209](https://github.com/opentripplanner/OpenTripPlanner/pull/5209)
+- Allow multiple FlexibleAreas in a FlexibleStopPlace [#4922](https://github.com/opentripplanner/OpenTripPlanner/pull/4922)
+- Prevent NPE in vehicle position matching [#5212](https://github.com/opentripplanner/OpenTripPlanner/pull/5212)
+- Empty stop_headsign will fall back to trip_headsign [#5205](https://github.com/opentripplanner/OpenTripPlanner/pull/5205)
+- Treat escalator differently from stairs, add escalator reluctance [#5046](https://github.com/opentripplanner/OpenTripPlanner/pull/5046)
+- Flex build time and memory optimization for large zones [#5233](https://github.com/opentripplanner/OpenTripPlanner/pull/5233)
+- Fix pathway traversal time calculation when none is supplied [#5242](https://github.com/opentripplanner/OpenTripPlanner/pull/5242)
+- Add check for null value of serviceCodesRunning in TripPatternForDateMapper [#5239](https://github.com/opentripplanner/OpenTripPlanner/pull/5239)
+- Improve error handling in TransmodelGraph [#5192](https://github.com/opentripplanner/OpenTripPlanner/pull/5192)
+- Fix filtering by submode [#5261](https://github.com/opentripplanner/OpenTripPlanner/pull/5261)
+- Add leg.headsign to GTFS GraphQL API [#5290](https://github.com/opentripplanner/OpenTripPlanner/pull/5290)
+- Return client error for invalid Transmodel query JSON format [#5277](https://github.com/opentripplanner/OpenTripPlanner/pull/5277)
+- Validate missing intermediate location in via requests [#5253](https://github.com/opentripplanner/OpenTripPlanner/pull/5253)
+- Support Fares v2 FareMedium and update spec implementation [#5227](https://github.com/opentripplanner/OpenTripPlanner/pull/5227)
+- Improve walk step narrative for entering/exiting stations and signposted pathways [#5285](https://github.com/opentripplanner/OpenTripPlanner/pull/5285)
+- Fix walk board cost comparison and add escalatorReluctance to hash [#5310](https://github.com/opentripplanner/OpenTripPlanner/pull/5310)
+- Remove pathway id from REST API [#5303](https://github.com/opentripplanner/OpenTripPlanner/pull/5303)
+- Remove Winkki street note updater [#5305](https://github.com/opentripplanner/OpenTripPlanner/pull/5305)
+- Extend stop area relation linking to include bus stop and platform nodes [#5319](https://github.com/opentripplanner/OpenTripPlanner/pull/5319)
+- Add access/egress penalty transmodel api [#5268](https://github.com/opentripplanner/OpenTripPlanner/pull/5268)
 
 
 ## 2.3.0 (2023-04-24)
@@ -68,7 +220,7 @@ based on merged pull requests. Search GitHub issues and pull requests for smalle
 - Remove all edges from stop vertex in island pruning [#4846](https://github.com/opentripplanner/OpenTripPlanner/pull/4846)
 - Filter functionality for GroupOfLines/GroupOfRoutes in TransmodelAPI [#4812](https://github.com/opentripplanner/OpenTripPlanner/pull/4812)
 - Mapping for maxAccessEgressDurationPerMode in Transmodel API [#4829](https://github.com/opentripplanner/OpenTripPlanner/pull/4829)
-- Use headsign from the original pattern in a realtime added pattern if the stop sequence is unchanged [#4845](https://github.com/opentripplanner/OpenTripPlanner/pull/4845)
+- Use headsign from the original pattern in a real-time added pattern if the stop sequence is unchanged [#4845](https://github.com/opentripplanner/OpenTripPlanner/pull/4845)
 - Remove RouteMatcher [#4821](https://github.com/opentripplanner/OpenTripPlanner/pull/4821)
 - Improve boarding location linking on platforms [#4852](https://github.com/opentripplanner/OpenTripPlanner/pull/4852)
 - Always check allowed modes in VehicleRentalEdge [#4810](https://github.com/opentripplanner/OpenTripPlanner/pull/4810)
@@ -116,7 +268,7 @@ based on merged pull requests. Search GitHub issues and pull requests for smalle
 - Experimental support for GTFS Fares V2 [#4338](https://github.com/opentripplanner/OpenTripPlanner/pull/4338)
 - Document JVM configuration options [#4492](https://github.com/opentripplanner/OpenTripPlanner/pull/4492)
 - Support for HTTPS datasource for Graph Building [#4482](https://github.com/opentripplanner/OpenTripPlanner/pull/4482)
-- Metrics for realtime trip updaters [#4471](https://github.com/opentripplanner/OpenTripPlanner/pull/4471)
+- Metrics for real-time trip updaters [#4471](https://github.com/opentripplanner/OpenTripPlanner/pull/4471)
 - Configuration Documentation generated programmatically [#4478](https://github.com/opentripplanner/OpenTripPlanner/pull/4478)
 
 
@@ -147,7 +299,7 @@ based on merged pull requests. Search GitHub issues and pull requests for smalle
 - Enable overriding maxDirectStreetDuration per mode [#4104](https://github.com/opentripplanner/OpenTripPlanner/pull/4104)
 - Preserve language in SIRI/GTFS-RT alert messages [#4117](https://github.com/opentripplanner/OpenTripPlanner/pull/4117)
 - Use board/alight cost only for transits [#4079](https://github.com/opentripplanner/OpenTripPlanner/pull/4079)
-- Improve SIRI realtime performance by reducing stopPattern duplicates [#4038](https://github.com/opentripplanner/OpenTripPlanner/pull/4038)
+- Improve SIRI real-time performance by reducing stopPattern duplicates [#4038](https://github.com/opentripplanner/OpenTripPlanner/pull/4038)
 - Siri updaters for Azure ServiceBus [#4106](https://github.com/opentripplanner/OpenTripPlanner/pull/4106)
 - Fallback to recorded/expected arrival/departure time if other one is missing in SIRI-ET [#4055](https://github.com/opentripplanner/OpenTripPlanner/pull/4055)
 - Allow overriding GBFS system_id with configuration [#4147](https://github.com/opentripplanner/OpenTripPlanner/pull/4147)
@@ -156,7 +308,7 @@ based on merged pull requests. Search GitHub issues and pull requests for smalle
 - Don't indicate stop has been updated when NO_DATA is defined [#3962](https://github.com/opentripplanner/OpenTripPlanner/pull/3962)
 - Implement nearby searches for car and bicycle parking [#4165](https://github.com/opentripplanner/OpenTripPlanner/pull/4165)
 - Do not link cars to stop vertices in routing [#4166](https://github.com/opentripplanner/OpenTripPlanner/pull/4166)
-- Add Siri realtime occupancy info [#4180](https://github.com/opentripplanner/OpenTripPlanner/pull/4180)
+- Add Siri real-time occupancy info [#4180](https://github.com/opentripplanner/OpenTripPlanner/pull/4180)
 - Add gtfs stop description translations [#4158](https://github.com/opentripplanner/OpenTripPlanner/pull/4158)
 - Add option to discard min transfer times [#4195](https://github.com/opentripplanner/OpenTripPlanner/pull/4195)
 - Use negative delay from first stop in a GTFS RT update in previous stop times when required [#4035](https://github.com/opentripplanner/OpenTripPlanner/pull/4035)
@@ -164,7 +316,7 @@ based on merged pull requests. Search GitHub issues and pull requests for smalle
 - Cost-based wheelchair accessibility routing for streets [#4163](https://github.com/opentripplanner/OpenTripPlanner/pull/4163)
 - Expose SIRI ET PredictionInaccurate in Transmodel-API [#4217](https://github.com/opentripplanner/OpenTripPlanner/pull/4217)
 - Do not apply walkable area processing to open platform geometries [#4225](https://github.com/opentripplanner/OpenTripPlanner/pull/4225)
-- Add field 'routingErrors' to LegacyGraphQLAPI [#4253](https://github.com/opentripplanner/OpenTripPlanner/pull/4253)
+- Add field 'routingErrors' to GTFS GraphQLAPI [#4253](https://github.com/opentripplanner/OpenTripPlanner/pull/4253)
 - Configure idempotent upload to Google Cloud Storage [#4269](https://github.com/opentripplanner/OpenTripPlanner/pull/4269)
 - Add support to unprefer certain routes [#4238](https://github.com/opentripplanner/OpenTripPlanner/pull/4238)
 - Fix inconsistent mapping of NeTEx quay publicCode [#4282](https://github.com/opentripplanner/OpenTripPlanner/pull/4282)
@@ -185,7 +337,7 @@ based on merged pull requests. Search GitHub issues and pull requests for smalle
 - Account for boarding restrictions when calculating direct transfers [#4421](https://github.com/opentripplanner/OpenTripPlanner/pull/4421)
 - Configure the import of OSM extracts individually [#4419](https://github.com/opentripplanner/OpenTripPlanner/pull/4419)
 - Configure the import of elevation data individually [#4423](https://github.com/opentripplanner/OpenTripPlanner/pull/4423)
-- Return typed errors from realtime updates, prepare for realtime statistics [#4424](https://github.com/opentripplanner/OpenTripPlanner/pull/4424)
+- Return typed errors from real-time updates, prepare for real-time statistics [#4424](https://github.com/opentripplanner/OpenTripPlanner/pull/4424)
 - Add feature switch for matching ET messages on stops [#4347](https://github.com/opentripplanner/OpenTripPlanner/pull/4347)
 - Make safety defaults customizable for walking and cycling [#4438](https://github.com/opentripplanner/OpenTripPlanner/pull/4438)
 - Fix block-based interlining when importing several GTFS feeds [#4468](https://github.com/opentripplanner/OpenTripPlanner/pull/4468)
@@ -223,7 +375,7 @@ based on merged pull requests. Search GitHub issues and pull requests for smalle
 
 ### Detailed changes by Pull Request
 
-- Fix NullPointerException when a RealTime update do not match an existing TripPattern [#3284](https://github.com/opentripplanner/OpenTripPlanner/issues/3284)
+- Fix NullPointerException when a Real-Time update do not match an existing TripPattern [#3284](https://github.com/opentripplanner/OpenTripPlanner/issues/3284)
 - Support for versioning the configuration files [#3282](https://github.com/opentripplanner/OpenTripPlanner/issues/3282)
 - Prioritize "direct" routes over transfers in group-filters [#3309](https://github.com/opentripplanner/OpenTripPlanner/issues/3309)
 - Remove poor transit results for short trips, when walking is better [#3331](https://github.com/opentripplanner/OpenTripPlanner/issues/3331)
@@ -310,7 +462,7 @@ based on merged pull requests. Search GitHub issues and pull requests for smalle
 - Remove build parameter 'useTransfersTxt' [#3791](https://github.com/opentripplanner/OpenTripPlanner/pull/3791)
 - Add cursor-based paging [#3759](https://github.com/opentripplanner/OpenTripPlanner/pull/3759)
 - Data overlay sandbox feature [#3760](https://github.com/opentripplanner/OpenTripPlanner/pull/3760)
-- Add support for sandboxed realtime vehicle parking updaters [#3796](https://github.com/opentripplanner/OpenTripPlanner/pull/3796)
+- Add support for sandboxed real-time vehicle parking updaters [#3796](https://github.com/opentripplanner/OpenTripPlanner/pull/3796)
 - Add reading and exposing of Netex submodes [#3793](https://github.com/opentripplanner/OpenTripPlanner/pull/3793)
 - Fix: Account for wait-time in no-wait Raptor strategy  [#3798](https://github.com/opentripplanner/OpenTripPlanner/pull/3798)
 - Read in flex window from Netex feeds [#3800](https://github.com/opentripplanner/OpenTripPlanner/pull/3800)
@@ -320,7 +472,7 @@ based on merged pull requests. Search GitHub issues and pull requests for smalle
 - Store stop indices in leg and use them to simplify logic in TripTimeShortHelper [#3820](https://github.com/opentripplanner/OpenTripPlanner/pull/3820)
 - Include all trips in `stopTimesForStop` [#3817](https://github.com/opentripplanner/OpenTripPlanner/pull/3817)
 - Store all alerts and add support for route_type and direction_id selectors [#3780](https://github.com/opentripplanner/OpenTripPlanner/pull/3780)
-- Remove outdated realtime-update from TimetableSnapshot [#3770](https://github.com/opentripplanner/OpenTripPlanner/pull/3770)
+- Remove outdated real-time-update from TimetableSnapshot [#3770](https://github.com/opentripplanner/OpenTripPlanner/pull/3770)
 - Contributing Guide [#3769](https://github.com/opentripplanner/OpenTripPlanner/pull/3769)
 - OTP support for NeTEx branding [#3829](https://github.com/opentripplanner/OpenTripPlanner/pull/3829)
 - Not allowed transfers and support for GTFS transfer points [#3792](https://github.com/opentripplanner/OpenTripPlanner/pull/3792)
@@ -347,13 +499,11 @@ based on merged pull requests. Search GitHub issues and pull requests for smalle
 - Optimize RAPTOR trip search by pre-calculating arrival/departure time arrays [#3919](https://github.com/opentripplanner/OpenTripPlanner/pull/3919)
 - Make turn restrictions faster and thread-safe by moving them into StreetEdge [#3899](https://github.com/opentripplanner/OpenTripPlanner/pull/3899)
 - Add routing using frequency trips [#3916](https://github.com/opentripplanner/OpenTripPlanner/pull/3916)
-- Remove ET realtime override code [#3912](https://github.com/opentripplanner/OpenTripPlanner/pull/3912)
+- Remove ET real-time override code [#3912](https://github.com/opentripplanner/OpenTripPlanner/pull/3912)
 - Allow traversal of pathways without traversal time, distance or steps [#3910](https://github.com/opentripplanner/OpenTripPlanner/pull/3910)
 
 
 ## 2.0.0 (2020-11-27)
-
-See the [OTP2 Migration Guide](OTP2-MigrationGuide.md) on changes to the REST API.
 
 - Sandbox for experimental features [#2745](https://github.com/opentripplanner/OpenTripPlanner/issues/2745)
 - Bugfix for Missing platforms for stops in GTFS import causes a NPE [#2804](https://github.com/opentripplanner/OpenTripPlanner/issues/2804)
@@ -379,8 +529,8 @@ See the [OTP2 Migration Guide](OTP2-MigrationGuide.md) on changes to the REST AP
 - Support for next/previous paging trip search results [#2941](https://github.com/opentripplanner/OpenTripPlanner/issues/2941)
 - Fix mismatch in duration for walk legs, resulting in negative wait times [#2955](https://github.com/opentripplanner/OpenTripPlanner/issues/2955)
 - NeTEx import now supports ServiceLinks [#2951](https://github.com/opentripplanner/OpenTripPlanner/issues/2951)
-- Also check TripPatterns added by realtime when showing stoptimes for stop [#2954](https://github.com/opentripplanner/OpenTripPlanner/issues/2954)
-- Copy geometries from previous TripPattern when realtime updates result in a TripPattern being replaced [#2987](https://github.com/opentripplanner/OpenTripPlanner/issues/2987)
+- Also check TripPatterns added by real-time when showing stoptimes for stop [#2954](https://github.com/opentripplanner/OpenTripPlanner/issues/2954)
+- Copy geometries from previous TripPattern when real-time updates result in a TripPattern being replaced [#2987](https://github.com/opentripplanner/OpenTripPlanner/issues/2987)
 - Support for the Norwegian language.
 - Update pathways support to official GTFS specification [#2923](https://github.com/opentripplanner/OpenTripPlanner/issues/2923)
 - Support for XML (de-)serialization is REMOVED from the REST API [#3031](https://github.com/opentripplanner/OpenTripPlanner/issues/3031)
@@ -416,7 +566,7 @@ See the [OTP2 Migration Guide](OTP2-MigrationGuide.md) on changes to the REST AP
 - Remove the coupling to OneBusAway GTFS within OTP's internal model by creating new classes replacing the external classes [#2494](https://github.com/opentripplanner/OpenTripPlanner/issues/2494)
 - Allow itineraries in response to be sorted by duration [#2593](https://github.com/opentripplanner/OpenTripPlanner/issues/2593)
 - Fix reverse optimization bug #2653, #2411
-- increase GTFS-realtime feeds size limit from 64MB to 2G [#2738](https://github.com/opentripplanner/OpenTripPlanner/issues/2738)
+- increase GTFS-real-time feeds size limit from 64MB to 2G [#2738](https://github.com/opentripplanner/OpenTripPlanner/issues/2738)
 - Fix XML response serialization [#2685](https://github.com/opentripplanner/OpenTripPlanner/issues/2685)
 - Refactor InterleavedBidirectionalHeuristic [#2671](https://github.com/opentripplanner/OpenTripPlanner/issues/2671)
 - Add "Accept" headers to GTFS-RT HTTP requests [#2796](https://github.com/opentripplanner/OpenTripPlanner/issues/2796)
@@ -428,7 +578,7 @@ See the [OTP2 Migration Guide](OTP2-MigrationGuide.md) on changes to the REST AP
 - Support OSM highway=razed tag [#2660](https://github.com/opentripplanner/OpenTripPlanner/issues/2660)
 - Add bicimad bike rental updater [#2503](https://github.com/opentripplanner/OpenTripPlanner/issues/2503)
 - Add Smoove citybikes updater [#2515](https://github.com/opentripplanner/OpenTripPlanner/issues/2515)
-- Allow big GTFS-realtime feeds by increasing protobuf size limit to 2G [#2739](https://github.com/opentripplanner/OpenTripPlanner/issues/2739)
+- Allow big GTFS-real-time feeds by increasing protobuf size limit to 2G [#2739](https://github.com/opentripplanner/OpenTripPlanner/issues/2739)
 - Cannot transfer between stops at exactly the same location [#2371](https://github.com/opentripplanner/OpenTripPlanner/issues/2371)
 - Improve documentation for `mode` routing parameter [#2809](https://github.com/opentripplanner/OpenTripPlanner/issues/2809)
 - Switched to single license file, removing all OTP and OBA file license headers
@@ -665,7 +815,7 @@ See the [OTP2 Migration Guide](OTP2-MigrationGuide.md) on changes to the REST AP
 - Disable some time consuming graph building steps by default
 - Finnish and Swedish translations
 - Subway-specific JSON configuration options (street to platform time)
-- Realtime fetch / streaming configurable via JSON
+- Real-time fetch / streaming configurable via JSON
 - Stairs reluctance is much higher when carrying a bike
 - Graph visualizer routing progress animates when a search is triggered via the web API
 - Assume WGS84 (spherical distance calculations) everywhere
@@ -733,7 +883,7 @@ represents a much earlier stage in the development of OTP.
 ## 0.7.0 (2012-04-29)
 
 - Bike rental support (thanks Laurent Grégoire)
-- Realtime bike rental availability feed support
+- Real-time bike rental availability feed support
 - Updated to new version of One Bus Away GTFS/CSV, fixing timezone and string interning issues (thanks Brian Ferris)
 - Bugfixes in area routing, OSM loading, nonexistant NED tiles, route short names
 - Dutch and French language updates
@@ -760,7 +910,7 @@ represents a much earlier stage in the development of OTP.
 - git commit IDs included in MavenVersion, allowing clearer OTP/Graph version mismatch warnings
 - fix problems with immediate reboarding and unexpected edges in itinerary builder
 - favicon (thanks Joel Haasnoot)
-- Legs in API response have TripId (for realtime information)
+- Legs in API response have TripId (for real-time information)
 - Polish locale (thanks Łukasz Witkowski)
 - transfers.txt can define station paths, entry costs for stations
 - allow loading a base graph into graphbuilder instead of starting from scratch

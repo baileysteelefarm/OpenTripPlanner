@@ -3,8 +3,6 @@ package org.opentripplanner.street.model.edge;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.params.provider.Arguments.of;
 
-import java.util.Collection;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -13,9 +11,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.opentripplanner.framework.geometry.WgsCoordinate;
 import org.opentripplanner.framework.i18n.NonLocalizedString;
 import org.opentripplanner.routing.api.request.StreetMode;
-import org.opentripplanner.routing.api.request.request.VehicleParkingRequest;
-import org.opentripplanner.routing.api.request.request.filter.VehicleParkingFilter;
-import org.opentripplanner.routing.api.request.request.filter.VehicleParkingFilterRequest;
 import org.opentripplanner.routing.vehicle_parking.VehicleParking;
 import org.opentripplanner.routing.vehicle_parking.VehicleParkingEntrance;
 import org.opentripplanner.routing.vehicle_parking.VehicleParkingSpaces;
@@ -82,21 +77,21 @@ class VehicleParkingPreferredTagsTest {
       .coordinate(COORDINATE)
       .build();
 
-    var fromV = new VehicleParkingEntranceVertex(null, entrance);
-    var edge = new VehicleParkingEdge(fromV);
-
-    var parkingReq = new VehicleParkingRequest();
-    Collection<VehicleParkingFilter> select = List.of(
-      new VehicleParkingFilter.TagsFilter(preferredTags)
-    );
-    parkingReq.setPreferred(new VehicleParkingFilterRequest(List.of(), select));
-    parkingReq.setUnpreferredCost(EXTRA_COST);
+    var fromV = new VehicleParkingEntranceVertex(entrance);
+    var edge = VehicleParkingEdge.createVehicleParkingEdge(fromV);
 
     var req = StreetSearchRequest.of();
     req.withMode(StreetMode.BIKE_TO_PARK);
-    req.withParking(parkingReq);
     req.withArriveBy(arriveBy);
-    req.withPreferences(p -> p.withBike(bike -> bike.withParkCost(0)));
+    req.withPreferences(p ->
+      p.withBike(bike -> {
+        bike.withParking(parkingPreferences -> {
+          parkingPreferences.withUnpreferredVehicleParkingTagCost(EXTRA_COST);
+          parkingPreferences.withPreferredVehicleParkingTags(preferredTags);
+          parkingPreferences.withCost(0);
+        });
+      })
+    );
 
     var result = traverse(fromV, edge, req.build());
 
@@ -107,6 +102,6 @@ class VehicleParkingPreferredTagsTest {
     var state = new State(fromV, request);
 
     assertEquals(0, state.weight);
-    return edge.traverse(state);
+    return edge.traverse(state)[0];
   }
 }

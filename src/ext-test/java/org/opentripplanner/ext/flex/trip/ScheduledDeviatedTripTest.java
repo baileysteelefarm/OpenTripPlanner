@@ -18,11 +18,12 @@ import org.locationtech.jts.geom.Coordinate;
 import org.opentripplanner.TestOtpModel;
 import org.opentripplanner.TestServerContext;
 import org.opentripplanner._support.time.ZoneIds;
-import org.opentripplanner.ext.fares.FaresFilter;
+import org.opentripplanner.ext.fares.DecorateWithFare;
 import org.opentripplanner.ext.flex.FlexRouter;
 import org.opentripplanner.ext.flex.FlexTest;
 import org.opentripplanner.framework.application.OTPFeature;
 import org.opentripplanner.framework.geometry.EncodedPolyline;
+import org.opentripplanner.framework.i18n.I18NString;
 import org.opentripplanner.framework.time.ServiceDateUtils;
 import org.opentripplanner.graph_builder.module.ValidateAndInterpolateStopTimesForEachTrip;
 import org.opentripplanner.model.GenericLocation;
@@ -32,7 +33,6 @@ import org.opentripplanner.routing.algorithm.raptoradapter.router.AdditionalSear
 import org.opentripplanner.routing.algorithm.raptoradapter.router.TransitRouter;
 import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.routing.api.request.request.filter.AllowAllTransitFilter;
-import org.opentripplanner.routing.core.FareType;
 import org.opentripplanner.routing.framework.DebugTimingAggregator;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.graphfinder.NearbyStop;
@@ -41,7 +41,6 @@ import org.opentripplanner.standalone.config.sandbox.FlexConfig;
 import org.opentripplanner.street.model.vertex.StreetLocation;
 import org.opentripplanner.street.search.request.StreetSearchRequest;
 import org.opentripplanner.street.search.state.State;
-import org.opentripplanner.transit.model.basic.Money;
 import org.opentripplanner.transit.model.framework.FeedScopedId;
 import org.opentripplanner.transit.model.site.AreaStop;
 import org.opentripplanner.transit.service.DefaultTransitService;
@@ -143,14 +142,13 @@ public class ScheduledDeviatedTripTest extends FlexTest {
       List.of(to)
     );
 
-    var filter = new FaresFilter(graph.getFareService());
+    var filter = new DecorateWithFare(graph.getFareService());
 
-    var itineraries = filter.filter(router.createFlexOnlyItineraries().stream().toList());
+    var itineraries = router.createFlexOnlyItineraries().stream().peek(filter::decorate).toList();
 
-    var itinerary = itineraries.iterator().next();
-    assertFalse(itinerary.getFares().getTypes().isEmpty());
+    var itinerary = itineraries.getFirst();
 
-    assertEquals(Money.usDollars(250), itinerary.getFares().getFare(FareType.regular));
+    assertFalse(itinerary.getFares().getLegProducts().isEmpty());
 
     OTPFeature.enableFeatures(Map.of(OTPFeature.FlexRouting, false));
   }
@@ -222,7 +220,7 @@ public class ScheduledDeviatedTripTest extends FlexTest {
    */
   @Test
   void parseContinuousPickup() {
-    var lincolnGraph = FlexTest.buildFlexGraph(LINCOLN_COUNTY_GBFS);
+    var lincolnGraph = FlexTest.buildFlexGraph(LINCOLN_COUNTY_GTFS);
     assertNotNull(lincolnGraph);
   }
 
@@ -277,7 +275,10 @@ public class ScheduledDeviatedTripTest extends FlexTest {
       stopLocation,
       0,
       List.of(),
-      new State(new StreetLocation(id, new Coordinate(0, 0), id), StreetSearchRequest.of().build())
+      new State(
+        new StreetLocation(id, new Coordinate(0, 0), I18NString.of(id)),
+        StreetSearchRequest.of().build()
+      )
     );
   }
 

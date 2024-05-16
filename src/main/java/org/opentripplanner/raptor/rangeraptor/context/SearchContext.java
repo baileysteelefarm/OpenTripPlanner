@@ -1,9 +1,14 @@
 package org.opentripplanner.raptor.rangeraptor.context;
 
+import static org.opentripplanner.raptor.rangeraptor.internalapi.ParetoSetTime.USE_ARRIVAL_TIME;
+import static org.opentripplanner.raptor.rangeraptor.internalapi.ParetoSetTime.USE_DEPARTURE_TIME;
+import static org.opentripplanner.raptor.rangeraptor.internalapi.ParetoSetTime.USE_TIMETABLE;
+
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.IntPredicate;
 import java.util.function.ToIntFunction;
 import javax.annotation.Nullable;
 import org.opentripplanner.raptor.api.debug.RaptorTimers;
@@ -19,6 +24,7 @@ import org.opentripplanner.raptor.api.request.RaptorRequest;
 import org.opentripplanner.raptor.api.request.RaptorTuningParameters;
 import org.opentripplanner.raptor.api.request.SearchParams;
 import org.opentripplanner.raptor.rangeraptor.debug.DebugHandlerFactory;
+import org.opentripplanner.raptor.rangeraptor.internalapi.ParetoSetTime;
 import org.opentripplanner.raptor.rangeraptor.internalapi.RoundProvider;
 import org.opentripplanner.raptor.rangeraptor.internalapi.SlackProvider;
 import org.opentripplanner.raptor.rangeraptor.internalapi.WorkerLifeCycle;
@@ -62,22 +68,28 @@ public class SearchContext<T extends RaptorTripSchedule> {
   private final AccessPaths accessPaths;
   private final LifeCycleSubscriptions lifeCycleSubscriptions = new LifeCycleSubscriptions();
 
+  @Nullable
+  private final IntPredicate acceptC2AtDestination;
+
   /** Lazy initialized */
   private RaptorCostCalculator<T> costCalculator = null;
 
+  /**
+   * @param acceptC2AtDestination Currently only the pass-through has a constraint on the c2 value
+   *                             for accepting it at the destination, if not this is {@code null}.
+   */
   public SearchContext(
     RaptorRequest<T> request,
     RaptorTuningParameters tuningParameters,
-    RaptorTransitDataProvider<T> transit
+    RaptorTransitDataProvider<T> transit,
+    @Nullable IntPredicate acceptC2AtDestination
   ) {
     this.request = request;
     this.tuningParameters = tuningParameters;
     this.transit = transit;
-    this.accessPaths = accessPaths(request);
+    this.accessPaths = accessPaths(tuningParameters.iterationDepartureStepInSeconds(), request);
     this.egressPaths = egressPaths(request);
-
-    // Note that it is the "new" request that is passed in.
-    this.calculator = createCalculator(this.request, tuningParameters);
+    this.calculator = createCalculator(request, tuningParameters);
     this.roundTracker =
       new RoundTracker(
         nRounds(),
@@ -85,6 +97,7 @@ public class SearchContext<T extends RaptorTripSchedule> {
         lifeCycle()
       );
     this.debugFactory = new DebugHandlerFactory<>(debugRequest(request), lifeCycle());
+    this.acceptC2AtDestination = acceptC2AtDestination;
   }
 
   public AccessPaths accessPaths() {
@@ -162,6 +175,11 @@ public class SearchContext<T extends RaptorTripSchedule> {
     return request.performanceTimers();
   }
 
+  @Nullable
+  public IntPredicate acceptC2AtDestination() {
+    return acceptC2AtDestination;
+  }
+
   /** Number of stops in transit graph. */
   public int nStops() {
     return transit.numberOfStops();
@@ -215,6 +233,13 @@ public class SearchContext<T extends RaptorTripSchedule> {
   }
 
   /**
+   * Resolve which pareto-set time config to use.
+   */
+  public ParetoSetTime paretoSetTimeConfig() {
+    return paretoSetTimeConfig(searchParams(), searchDirection());
+  }
+
+  /**
    * The multi-criteria state can handle multiple access/egress paths to a single stop, but the
    * Standard and BestTime states do not. To get a deterministic behaviour we filter the paths and
    * return the paths with the shortest duration for none multi-criteria search. If two paths have
@@ -254,10 +279,14 @@ public class SearchContext<T extends RaptorTripSchedule> {
     RaptorRequest<T> r,
     RaptorTuningParameters t
   ) {
+    var forward = r.searchDirection().isForward();
     SearchParams s = r.searchParams();
-    return r.searchDirection().isForward()
-      ? new ForwardRaptorTransitCalculator<>(s, t)
-      : new ReverseRaptorTransitCalculator<>(s, t);
+
+    if (forward) {
+      return new ForwardRaptorTransitCalculator<>(s, t);
+    } else {
+      return new ReverseRaptorTransitCalculator<>(s, t);
+    }
   }
 
   private static DebugRequest debugRequest(RaptorRequest<?> request) {
@@ -285,11 +314,11 @@ public class SearchContext<T extends RaptorTripSchedule> {
       : p -> slackProvider.alightSlack(p.slackIndex());
   }
 
-  private static AccessPaths accessPaths(RaptorRequest<?> request) {
+  private static AccessPaths accessPaths(int iterationStep, RaptorRequest<?> request) {
     boolean forward = request.searchDirection().isForward();
     var params = request.searchParams();
     var paths = forward ? params.accessPaths() : params.egressPaths();
-    return AccessPaths.create(paths, request.profile());
+    return AccessPaths.create(iterationStep, paths, request.profile(), request.searchDirection());
   }
 
   private static EgressPaths egressPaths(RaptorRequest<?> request) {
@@ -297,5 +326,18 @@ public class SearchContext<T extends RaptorTripSchedule> {
     var params = request.searchParams();
     var paths = forward ? params.egressPaths() : params.accessPaths();
     return EgressPaths.create(paths, request.profile());
+  }
+
+  static ParetoSetTime paretoSetTimeConfig(
+    SearchParams searchParams,
+    SearchDirection searchDirection
+  ) {
+    if (searchParams.timetable()) {
+      return USE_TIMETABLE;
+    }
+    boolean preferLatestDeparture =
+      searchParams.preferLateArrival() != searchDirection.isInReverse();
+
+    return preferLatestDeparture ? USE_DEPARTURE_TIME : USE_ARRIVAL_TIME;
   }
 }

@@ -5,9 +5,11 @@ import static java.util.Objects.requireNonNullElseGet;
 import static org.opentripplanner.framework.lang.ObjectUtils.requireNotInitialized;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.locationtech.jts.geom.Coordinate;
@@ -157,9 +159,18 @@ public final class TripPattern
     return stopPattern;
   }
 
-  // TODO OTP2 this method modifies the state, it will be refactored in a subsequent step
-  public void setHopGeometry(int i, LineString hopGeometry) {
-    this.hopGeometries[i] = CompactLineStringUtils.compactLineString(hopGeometry, false);
+  /**
+   * Return the "original"/planned stop pattern as a builder. This is used when a realtime-update
+   * contains a full set of stops/pickup/dropoff for a pattern. This will wipe out any changes
+   * to the stop-pattern from previous updates.
+   * <p>
+   * Be aware, if the same update is applied twice, then the first instance will be reused to avoid
+   * unnecessary objects creation and gc.
+   */
+  public StopPattern.StopPatternBuilder copyPlannedStopPattern() {
+    return isModified()
+      ? originalTripPattern.stopPattern.mutate(stopPattern)
+      : stopPattern.mutate();
   }
 
   public LineString getGeometry() {
@@ -172,10 +183,6 @@ public final class TripPattern
       lineStrings.add(getHopGeometry(i));
     }
     return GeometryUtils.concatenateLineStrings(lineStrings);
-  }
-
-  public int numHopGeometries() {
-    return hopGeometries.length;
   }
 
   public int numberOfStops() {
@@ -353,7 +360,7 @@ public final class TripPattern
    */
   public boolean isModifiedFromTripPatternWithEqualStops(TripPattern other) {
     return (
-      originalTripPattern != null &&
+      isModified() &&
       originalTripPattern.equals(other) &&
       getStopPattern().stopsEqual(other.getStopPattern())
     );
@@ -401,6 +408,10 @@ public final class TripPattern
     return originalTripPattern;
   }
 
+  public boolean isModified() {
+    return originalTripPattern != null;
+  }
+
   /**
    * Returns trip headsign from the scheduled timetables or from the original pattern's scheduled
    * timetables if this pattern is added by realtime and the stop sequence has not changed apart
@@ -413,14 +424,6 @@ public final class TripPattern
     return tripTimes == null
       ? getTripHeadsignFromOriginalPattern()
       : getTripHeadSignFromTripTimes(tripTimes);
-  }
-
-  public I18NString getStopHeadsign(int stopIndex) {
-    var tripTimes = scheduledTimetable.getRepresentativeTripTimes();
-    if (tripTimes == null) {
-      return null;
-    }
-    return tripTimes.getHeadsign(stopIndex);
   }
 
   public TripPattern clone() {
@@ -451,8 +454,25 @@ public final class TripPattern
     return route.logName();
   }
 
+  /**
+   * Does the pattern contain any stops passed in as argument?
+   * This method is not optimized for performance so don't use it where that is critical.
+   */
+  public boolean containsAnyStopId(Collection<FeedScopedId> ids) {
+    return ids
+      .stream()
+      .anyMatch(id ->
+        stopPattern
+          .getStops()
+          .stream()
+          .map(StopLocation::getId)
+          .collect(Collectors.toUnmodifiableSet())
+          .contains(id)
+      );
+  }
+
   private static Coordinate coordinate(StopLocation s) {
-    return new Coordinate(s.getLon(), s.getLat());
+    return s.getCoordinate().asJtsCoordinate();
   }
 
   @Override
@@ -479,7 +499,7 @@ public final class TripPattern
    * is added through a realtime update. The pickup and dropoff values don't have to be the same.
    */
   private boolean containsSameStopsAsOriginalPattern() {
-    return originalTripPattern != null && getStops().equals(originalTripPattern.getStops());
+    return isModified() && getStops().equals(originalTripPattern.getStops());
   }
 
   /**

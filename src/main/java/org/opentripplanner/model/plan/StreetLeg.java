@@ -9,9 +9,9 @@ import javax.annotation.Nullable;
 import org.locationtech.jts.geom.LineString;
 import org.opentripplanner.framework.lang.DoubleUtils;
 import org.opentripplanner.framework.tostring.ToStringBuilder;
+import org.opentripplanner.model.fare.FareProductUse;
 import org.opentripplanner.street.model.note.StreetNote;
 import org.opentripplanner.street.search.TraverseMode;
-import org.opentripplanner.transit.model.framework.FeedScopedId;
 
 /**
  * One leg of a trip -- that is, a temporally continuous piece of the journey that takes place using
@@ -31,7 +31,6 @@ public class StreetLeg implements Leg {
   private final Set<StreetNote> streetNotes;
   private final ElevationProfile elevationProfile;
 
-  private final FeedScopedId pathwayId;
   private final Boolean walkingBike;
   private final Boolean rentedVehicle;
   private final String vehicleRentalNetwork;
@@ -49,7 +48,6 @@ public class StreetLeg implements Leg {
     this.legGeometry = builder.getGeometry();
     this.walkSteps = builder.getWalkSteps();
     this.streetNotes = Set.copyOf(builder.getStreetNotes());
-    this.pathwayId = builder.getPathwayId();
     this.walkingBike = builder.getWalkingBike();
     this.rentedVehicle = builder.getRentedVehicle();
     this.vehicleRentalNetwork = builder.getVehicleRentalNetwork();
@@ -92,11 +90,6 @@ public class StreetLeg implements Leg {
   @Override
   public double getDistanceMeters() {
     return distanceMeters;
-  }
-
-  @Override
-  public FeedScopedId getPathwayId() {
-    return pathwayId;
   }
 
   @Override
@@ -172,12 +165,25 @@ public class StreetLeg implements Leg {
       .build();
   }
 
+  @Override
+  public void setFareProducts(List<FareProductUse> products) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public List<FareProductUse> fareProducts() {
+    return List.of();
+  }
+
   public StreetLeg withAccessibilityScore(float accessibilityScore) {
     return StreetLegBuilder.of(this).withAccessibilityScore(accessibilityScore).build();
   }
 
   /**
-   * Should be used for debug logging only
+   * Should be used for debug logging only.
+   * <p>
+   * The {@code legGeometry}, {@code elevationProfile}, and {@code walkSteps} are skipped to avoid
+   * spamming logs. Explicit access should be used if needed.
    */
   @Override
   public String toString() {
@@ -190,10 +196,6 @@ public class StreetLeg implements Leg {
       .addEnum("mode", mode)
       .addNum("distance", distanceMeters, "m")
       .addNum("cost", generalizedCost)
-      .addObj("gtfsPathwayId", pathwayId)
-      .addObj("legGeometry", legGeometry)
-      .addObj("legElevation", elevationProfile)
-      .addCol("walkSteps", walkSteps)
       .addCol("streetNotes", streetNotes)
       .addBool("walkingBike", walkingBike)
       .addBool("rentedVehicle", rentedVehicle)

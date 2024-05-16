@@ -1,5 +1,6 @@
 package org.opentripplanner.street.model.edge;
 
+import javax.annotation.Nonnull;
 import org.locationtech.jts.geom.LineString;
 import org.opentripplanner.framework.i18n.I18NString;
 import org.opentripplanner.street.model.vertex.Vertex;
@@ -14,8 +15,12 @@ import org.opentripplanner.street.search.state.StateEditor;
  */
 public class FreeEdge extends Edge {
 
-  public FreeEdge(Vertex from, Vertex to) {
+  protected FreeEdge(Vertex from, Vertex to) {
     super(from, to);
+  }
+
+  public static FreeEdge createFreeEdge(Vertex from, Vertex to) {
+    return connectToGraph(new FreeEdge(from, to));
   }
 
   public String toString() {
@@ -23,25 +28,16 @@ public class FreeEdge extends Edge {
   }
 
   @Override
-  public State traverse(State s0) {
+  @Nonnull
+  public State[] traverse(State s0) {
     StateEditor s1 = s0.edit(this);
     s1.incrementWeight(1);
     s1.setBackMode(null);
-    return s1.makeState();
+    return s1.makeStateArray();
   }
 
   @Override
   public I18NString getName() {
     return null;
-  }
-
-  @Override
-  public LineString getGeometry() {
-    return null;
-  }
-
-  @Override
-  public double getDistanceMeters() {
-    return 0;
   }
 }

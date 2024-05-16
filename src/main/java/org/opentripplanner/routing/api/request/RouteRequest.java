@@ -7,15 +7,24 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
+import javax.annotation.Nullable;
+import org.opentripplanner.framework.collection.ListSection;
 import org.opentripplanner.framework.time.DateUtils;
+import org.opentripplanner.framework.tostring.ToStringBuilder;
 import org.opentripplanner.model.GenericLocation;
 import org.opentripplanner.model.plan.SortOrder;
-import org.opentripplanner.model.plan.pagecursor.PageCursor;
-import org.opentripplanner.model.plan.pagecursor.PageType;
+import org.opentripplanner.model.plan.paging.cursor.PageCursor;
 import org.opentripplanner.routing.api.request.preference.RoutingPreferences;
 import org.opentripplanner.routing.api.request.request.JourneyRequest;
+import org.opentripplanner.routing.api.response.InputField;
+import org.opentripplanner.routing.api.response.RoutingError;
+import org.opentripplanner.routing.api.response.RoutingErrorCode;
+import org.opentripplanner.routing.error.RoutingValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +56,12 @@ public class RouteRequest implements Cloneable, Serializable {
 
   private GenericLocation to;
 
+  private List<PassThroughPoint> passThroughPoints = Collections.emptyList();
+
   private Instant dateTime = Instant.now();
+
+  @Nullable
+  private Duration maxSearchWindow;
 
   private Duration searchWindow;
 
@@ -143,7 +157,7 @@ public class RouteRequest implements Cloneable, Serializable {
 
   public SortOrder itinerariesSortOrder() {
     if (pageCursor != null) {
-      return pageCursor.originalSortOrder;
+      return pageCursor.originalSortOrder();
     }
     return arriveBy ? SortOrder.STREET_AND_DEPARTURE_TIME : SortOrder.STREET_AND_ARRIVAL_TIME;
   }
@@ -157,10 +171,11 @@ public class RouteRequest implements Cloneable, Serializable {
     if (pageCursor != null) {
       // We switch to "depart-after" search when paging next(lat==null). It does not make
       // sense anymore to keep the latest-arrival-time when going to the "next page".
-      if (pageCursor.latestArrivalTime == null) {
+      if (pageCursor.latestArrivalTime() == null) {
         arriveBy = false;
       }
-      this.dateTime = arriveBy ? pageCursor.latestArrivalTime : pageCursor.earliestDepartureTime;
+      this.dateTime =
+        arriveBy ? pageCursor.latestArrivalTime() : pageCursor.earliestDepartureTime();
       journey.setModes(journey.modes().copyOf().withDirectMode(StreetMode.NOT_SET).build());
       LOG.debug("Request dateTime={} set from pageCursor.", dateTime);
     }
@@ -168,50 +183,39 @@ public class RouteRequest implements Cloneable, Serializable {
 
   /**
    * When paging we must crop the list of itineraries in the right end according to the sorting of
-   * the original search and according to the page cursor type (next or previous).
-   * <p>
-   * We need to flip the cropping and crop the head/start of the itineraries when:
-   * <ul>
-   * <li>Paging to the previous page for a {@code depart-after/sort-on-arrival-time} search.
-   * <li>Paging to the next page for a {@code arrive-by/sort-on-departure-time} search.
-   * </ul>
+   * the original search and according to the paging direction (next or previous). We always
+   * crop at the end of the initial search. This is a utility function delegating to the
+   * pageCursor, if available.
    */
-  public boolean maxNumberOfItinerariesCropHead() {
-    if (pageCursor == null) {
-      return false;
-    }
-
-    var previousPage = pageCursor.type == PageType.PREVIOUS_PAGE;
-    return pageCursor.originalSortOrder.isSortedByArrivalTimeAcceding() == previousPage;
+  public ListSection cropItinerariesAt() {
+    return pageCursor == null ? ListSection.TAIL : pageCursor.cropItinerariesAt();
   }
 
   /**
-   * Related to {@link #maxNumberOfItinerariesCropHead()}, but is {@code true} if we should crop the
-   * search-window head(in the beginning) or tail(in the end).
-   * <p>
-   * For the first search we look if the sort is ascending(crop tail) or descending(crop head), and
-   * for paged results we look at the paging type: next(tail) and previous(head).
+   * Validate that the routing request contains both an origin and a destination. Origin and
+   * destination can be specified either by a reference to a stop place or by geographical
+   * coordinates. Origin and destination are required in a one-to-one search, but not in a
+   * many-to-one or one-to-many.
+   * TODO - Refactor and make separate requests for one-to-one and the other searches.
+   *
+   * @throws RoutingValidationException if either origin or destination is missing.
    */
-  public boolean doCropSearchWindowAtTail() {
-    if (pageCursor == null) {
-      return itinerariesSortOrder().isSortedByArrivalTimeAcceding();
-    }
-    return pageCursor.type == PageType.NEXT_PAGE;
-  }
+  public void validateOriginAndDestination() {
+    List<RoutingError> routingErrors = new ArrayList<>(2);
 
-  public String toString(String sep) {
-    return (
-      from +
-      sep +
-      to +
-      sep +
-      dateTime +
-      sep +
-      arriveBy +
-      sep +
-      journey.modes() +
-      journey.transit().filters()
-    );
+    if (from == null || !from.isSpecified()) {
+      routingErrors.add(
+        new RoutingError(RoutingErrorCode.LOCATION_NOT_FOUND, InputField.FROM_PLACE)
+      );
+    }
+
+    if (to == null || !to.isSpecified()) {
+      routingErrors.add(new RoutingError(RoutingErrorCode.LOCATION_NOT_FOUND, InputField.TO_PLACE));
+    }
+
+    if (!routingErrors.isEmpty()) {
+      throw new RoutingValidationException(routingErrors);
+    }
   }
 
   /* INSTANCE METHODS */
@@ -240,10 +244,6 @@ public class RouteRequest implements Cloneable, Serializable {
     }
   }
 
-  public String toString() {
-    return toString(" ");
-  }
-
   /** The start location */
   public GenericLocation from() {
     return from;
@@ -262,12 +262,20 @@ public class RouteRequest implements Cloneable, Serializable {
     this.to = to;
   }
 
+  public List<PassThroughPoint> getPassThroughPoints() {
+    return passThroughPoints;
+  }
+
+  public void setPassThroughPoints(final List<PassThroughPoint> passThroughPoints) {
+    this.passThroughPoints = passThroughPoints;
+  }
+
   /**
    * This is the time/duration in seconds from the earliest-departure-time(EDT) to
    * latest-departure-time(LDT). In case of a reverse search it will be the time from earliest to
    * latest arrival time (LAT - EAT).
    * <p>
-   * All optimal travels that depart within the search window is guarantied to be found.
+   * All optimal travels that depart within the search window is guaranteed to be found.
    * <p>
    * This is sometimes referred to as the Range Raptor Search Window - but could be used in a none
    * Transit search as well; Hence this is named search-window and not raptor-search-window. Do not
@@ -286,7 +294,27 @@ public class RouteRequest implements Cloneable, Serializable {
   }
 
   public void setSearchWindow(Duration searchWindow) {
+    if (searchWindow != null) {
+      if (hasMaxSearchWindow() && searchWindow.toSeconds() > maxSearchWindow.toSeconds()) {
+        throw new IllegalArgumentException("The search window cannot exceed " + maxSearchWindow);
+      }
+      if (searchWindow.isNegative()) {
+        throw new IllegalArgumentException("The search window must be a positive duration");
+      }
+    }
     this.searchWindow = searchWindow;
+  }
+
+  private boolean hasMaxSearchWindow() {
+    return maxSearchWindow != null;
+  }
+
+  public Duration maxSearchWindow() {
+    return maxSearchWindow;
+  }
+
+  public void setMaxSearchWindow(@Nullable Duration maxSearchWindow) {
+    this.maxSearchWindow = maxSearchWindow;
   }
 
   public Locale locale() {
@@ -375,5 +403,17 @@ public class RouteRequest implements Cloneable, Serializable {
 
   public void setNumItineraries(int numItineraries) {
     this.numItineraries = numItineraries;
+  }
+
+  public String toString() {
+    return ToStringBuilder
+      .of(RouteRequest.class)
+      .addObj("from", from)
+      .addObj("to", to)
+      .addDateTime("dateTime", dateTime)
+      .addBoolIfTrue("arriveBy", arriveBy)
+      .addObj("modes", journey.modes())
+      .addCol("filters", journey.transit().filters())
+      .toString();
   }
 }

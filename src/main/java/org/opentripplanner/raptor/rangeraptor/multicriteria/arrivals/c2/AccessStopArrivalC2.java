@@ -2,9 +2,9 @@ package org.opentripplanner.raptor.rangeraptor.multicriteria.arrivals.c2;
 
 import static org.opentripplanner.raptor.api.model.PathLegType.ACCESS;
 
-import org.opentripplanner.raptor.api.RaptorConstants;
 import org.opentripplanner.raptor.api.model.PathLegType;
 import org.opentripplanner.raptor.api.model.RaptorAccessEgress;
+import org.opentripplanner.raptor.api.model.RaptorConstants;
 import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
 import org.opentripplanner.raptor.api.view.AccessPathView;
 import org.opentripplanner.raptor.spi.RaptorCostCalculator;
@@ -24,7 +24,7 @@ final class AccessStopArrivalC2<T extends RaptorTripSchedule> extends AbstractSt
       departureTime,
       access.durationInSeconds(),
       access.numberOfRides(),
-      access.generalizedCost(),
+      access.c1(),
       RaptorCostCalculator.ZERO_COST
     );
     this.access = access;

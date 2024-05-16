@@ -5,8 +5,11 @@ import static org.opentripplanner.framework.lang.ObjectUtils.requireNotInitializ
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.opentripplanner.astar.spi.AStarState;
 import org.opentripplanner.ext.dataoverlay.routing.DataOverlayContext;
 import org.opentripplanner.framework.tostring.ToStringBuilder;
@@ -22,6 +25,7 @@ import org.opentripplanner.street.search.request.StreetSearchRequest;
 
 public class State implements AStarState<State, Edge, Vertex>, Cloneable {
 
+  private static final State[] EMPTY_STATES = {};
   private final StreetSearchRequest request;
 
   /* Data which is likely to change at most traversals */
@@ -40,9 +44,6 @@ public class State implements AStarState<State, Edge, Vertex>, Cloneable {
 
   public Edge backEdge;
 
-  // allow traverse result chaining (multiple results)
-  protected State next;
-
   /* StateData contains data which is unlikely to change as often */
   public StateData stateData;
 
@@ -60,7 +61,7 @@ public class State implements AStarState<State, Edge, Vertex>, Cloneable {
     this(
       vertex,
       streetSearchRequest.startTime(),
-      StateData.getInitialStateData(streetSearchRequest),
+      StateData.getBaseCaseStateData(streetSearchRequest),
       streetSearchRequest
     );
   }
@@ -76,7 +77,7 @@ public class State implements AStarState<State, Edge, Vertex>, Cloneable {
     this.vertex = vertex;
     this.backState = null;
     this.stateData = stateData;
-    if (!vertex.rentalRestrictions().noDropOffNetworks().isEmpty()) {
+    if (request.arriveBy() && !vertex.rentalRestrictions().noDropOffNetworks().isEmpty()) {
       this.stateData.noRentalDropOffZonesAtStartOfReverseSearch =
         vertex.rentalRestrictions().noDropOffNetworks();
     }
@@ -102,6 +103,57 @@ public class State implements AStarState<State, Edge, Vertex>, Cloneable {
       }
     }
     return states;
+  }
+
+  /**
+   * Takes a nullable state and returns an array of states, possibly empty.
+   */
+  public static State[] ofNullable(@Nullable State u) {
+    if (u == null) {
+      return EMPTY_STATES;
+    } else {
+      return new State[] { u };
+    }
+  }
+
+  /**
+   * Takes two nullable states and returns an array of states (possibly empty) which is guaranteed
+   * to contain no nulls.
+   * <p>
+   * This method is optimized for a low number of allocations and therefore doesn't use any streams
+   * or collections to filter out the nulls.
+   */
+  public static State[] ofNullable(@Nullable State s1, @Nullable State s2) {
+    if (s1 == null && s2 == null) {
+      return EMPTY_STATES;
+    } else if (s1 == null) {
+      return new State[] { s2 };
+    } else if (s2 == null) {
+      return new State[] { s1 };
+    } else {
+      return new State[] { s1, s2 };
+    }
+  }
+
+  /**
+   * Convenience method to return an empty array of states.
+   */
+  public static State[] empty() {
+    return EMPTY_STATES;
+  }
+
+  /**
+   * Convenience method to check if the state array is empty.
+   */
+  public static boolean isEmpty(State[] s) {
+    return s.length == 0;
+  }
+
+  /**
+   * Takes a stream of states and converts it to an array while removing nulls.
+   */
+  public static State[] ofStream(Stream<State> states) {
+    return states.filter(Objects::nonNull).toArray(State[]::new);
   }
 
   /**
@@ -154,7 +206,7 @@ public class State implements AStarState<State, Edge, Vertex>, Cloneable {
     );
   }
 
-  public boolean vehicleRentalIsFinished() {
+  private boolean vehicleRentalIsFinished() {
     return (
       stateData.vehicleRentalState == VehicleRentalState.HAVE_RENTED ||
       (
@@ -162,14 +214,17 @@ public class State implements AStarState<State, Edge, Vertex>, Cloneable {
         !stateData.insideNoRentalDropOffArea
       ) ||
       (
-        getRequest().rental().allowArrivingInRentedVehicleAtDestination() &&
+        getRequest()
+          .preferences()
+          .rental(getRequest().mode())
+          .allowArrivingInRentedVehicleAtDestination() &&
         stateData.mayKeepRentedVehicleAtDestination &&
         stateData.vehicleRentalState == VehicleRentalState.RENTING_FROM_STATION
       )
     );
   }
 
-  public boolean vehicleRentalNotStarted() {
+  private boolean vehicleRentalNotStarted() {
     return stateData.vehicleRentalState == VehicleRentalState.BEFORE_RENTING;
   }
 
@@ -245,39 +300,6 @@ public class State implements AStarState<State, Edge, Vertex>, Cloneable {
     this.backEdge = requireNotInitialized(this.backEdge, initialBackEdge);
   }
 
-  /**
-   * Optional next result that allows {@link Edge} to return multiple results.
-   *
-   * @return the next additional result from an edge traversal, or null if no more results
-   */
-  public State getNextResult() {
-    return next;
-  }
-
-  /**
-   * Extend an exiting result chain by appending this result to the existing chain. The usage model
-   * looks like this:
-   *
-   * <code>
-   * TraverseResult result = null;
-   * <p>
-   * for( ... ) { TraverseResult individualResult = ...; result = individualResult.addToExistingResultChain(result);
-   * }
-   * <p>
-   * return result;
-   * </code>
-   *
-   * @param existingResultChain the tail of an existing result chain, or null if the chain has not
-   *                            been started
-   */
-  public State addToExistingResultChain(State existingResultChain) {
-    if (this.getNextResult() != null) {
-      throw new IllegalStateException("this result already has a next result set");
-    }
-    next = existingResultChain;
-    return this;
-  }
-
   public StreetSearchRequest getRequest() {
     return request;
   }
@@ -287,13 +309,10 @@ public class State implements AStarState<State, Edge, Vertex>, Cloneable {
   }
 
   /**
-   * This method is on State rather than RouteRequest because we care whether the user is in
-   * possession of a rented bike.
-   *
-   * @return BICYCLE if routing with an owned bicycle, or if at this state the user is holding on to
-   * a rented bicycle.
+   * @return The current mode of this state. When doing a rental request, this can for example
+   * indicate if the state is currently using a vehicle or not.
    */
-  public TraverseMode getNonTransitMode() {
+  public TraverseMode currentMode() {
     return stateData.currentMode;
   }
 
@@ -377,7 +396,7 @@ public class State implements AStarState<State, Edge, Vertex>, Cloneable {
         }
       }
       if (orig.isVehicleParked() != orig.getBackState().isVehicleParked()) {
-        editor.setVehicleParked(true, orig.getBackState().getNonTransitMode());
+        editor.setVehicleParked(true, orig.getBackState().currentMode());
       }
 
       ret = editor.makeState();
@@ -408,6 +427,36 @@ public class State implements AStarState<State, Edge, Vertex>, Cloneable {
     return stateData.insideNoRentalDropOffArea;
   }
 
+  /**
+   * Whether the street path contains any driving.
+   */
+  public boolean containsModeCar() {
+    var state = this;
+    while (state != null) {
+      if (state.currentMode().isInCar()) {
+        return true;
+      } else {
+        state = state.getBackState();
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Check all edges is traversed on foot {@code mode=WALK}.
+   * <p>
+   * DO NOT USE THIS IN ROUTING IT WILL NOT PERFORM WELL!
+   */
+  public boolean containsOnlyWalkMode() {
+    // The for-loop has the best performance
+    for (var s = this; s != null; s = s.backState) {
+      if (!s.stateData.currentMode.isWalking()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   protected State clone() {
     State ret;
     try {
@@ -425,6 +474,12 @@ public class State implements AStarState<State, Edge, Vertex>, Cloneable {
       .addNum("weight", weight)
       .addObj("vertex", vertex)
       .addBoolIfTrue("VEHICLE_RENT", isRentingVehicle())
+      .addEnum("formFactor", vehicleRentalFormFactor())
+      .addBoolIfTrue("RENTING_FROM_STATION", isRentingVehicleFromStation())
+      .addBoolIfTrue(
+        "RENTING_FREE_FLOATING",
+        isRentingFloatingVehicle() && !isRentingVehicleFromStation()
+      )
       .addBoolIfTrue("VEHICLE_PARKED", isVehicleParked())
       .toString();
   }
@@ -451,7 +506,10 @@ public class State implements AStarState<State, Edge, Vertex>, Cloneable {
   private State reversedClone() {
     StreetSearchRequest reversedRequest = request
       .copyOfReversed(getTime())
-      .withPreferences(p -> p.withRental(r -> r.withUseAvailabilityInformation(false)))
+      .withPreferences(p -> {
+        p.withCar(c -> c.withRental(r -> r.withUseAvailabilityInformation(false)));
+        p.withBike(b -> b.withRental(r -> r.withUseAvailabilityInformation(false)));
+      })
       .build();
     StateData newStateData = stateData.clone();
     newStateData.backMode = null;

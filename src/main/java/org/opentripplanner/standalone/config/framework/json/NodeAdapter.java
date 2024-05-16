@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.opentripplanner.framework.application.OtpAppException;
 
@@ -168,9 +169,7 @@ public class NodeAdapter {
     for (String p : unusedParams()) {
       logger.accept("Unexpected config parameter: '" + p + "' in '" + source + "'");
     }
-    for (String warning : warnings) {
-      logger.accept(warning);
-    }
+    allWarnings().forEach(logger);
   }
 
   /**
@@ -211,14 +210,21 @@ public class NodeAdapter {
     return json.toPrettyString();
   }
 
-  /* private methods */
-
   NodeAdapter path(String paramName, JsonNode node) {
     if (childrenByName.containsKey(paramName)) {
       return childrenByName.get(paramName);
     }
     return new NodeAdapter(node, this, paramName);
   }
+
+  /**
+   * Create an undocumented child, version is required.
+   */
+  NodeAdapter pathUndocumentedChild(String paramName, OtpVersion since) {
+    return of(paramName).since(since).summary("NA").asObject();
+  }
+
+  /* private methods */
 
   /**
    * This method list all unused parameters(full path), also nested ones. It uses recursion to get
@@ -300,6 +306,14 @@ public class NodeAdapter {
   }
 
   /* private methods */
+
+  private Stream<String> allWarnings() {
+    Stream<String> childrenWarnings = childrenByName
+      .values()
+      .stream()
+      .flatMap(NodeAdapter::allWarnings);
+    return Stream.concat(childrenWarnings, warnings.stream());
+  }
 
   private void addParameterInfo(NodeInfo info) {
     if (parameters.containsKey(info.name())) {

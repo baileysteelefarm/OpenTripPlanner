@@ -8,18 +8,14 @@ import static org.opentripplanner.routing.api.request.StreetMode.BIKE;
 import static org.opentripplanner.routing.api.request.StreetMode.CAR;
 
 import java.io.File;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Set;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.opentripplanner.astar.model.GraphPath;
 import org.opentripplanner.astar.model.ShortestPathTree;
-import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.model.modes.ExcludeAllTransitFilter;
-import org.opentripplanner.openstreetmap.OpenStreetMapProvider;
+import org.opentripplanner.openstreetmap.OsmProvider;
 import org.opentripplanner.routing.api.request.RequestModes;
 import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.routing.api.request.request.filter.AllowAllTransitFilter;
@@ -27,12 +23,14 @@ import org.opentripplanner.routing.api.request.request.filter.TransitFilter;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.street.model.edge.Edge;
 import org.opentripplanner.street.model.vertex.Vertex;
+import org.opentripplanner.street.model.vertex.VertexLabel;
 import org.opentripplanner.street.search.StreetSearchBuilder;
 import org.opentripplanner.street.search.intersection_model.ConstantIntersectionTraversalCalculator;
 import org.opentripplanner.street.search.intersection_model.IntersectionTraversalCalculator;
 import org.opentripplanner.street.search.state.State;
 import org.opentripplanner.street.search.strategy.DominanceFunctions;
 import org.opentripplanner.street.search.strategy.EuclideanRemainingWeightHeuristic;
+import org.opentripplanner.test.support.ResourceLoader;
 import org.opentripplanner.transit.model.framework.Deduplicator;
 
 public class TriangleInequalityTest {
@@ -50,27 +48,16 @@ public class TriangleInequalityTest {
   public static void onlyOnce() {
     graph = new Graph(new Deduplicator());
 
-    File file = new File(
-      URLDecoder.decode(
-        TriangleInequalityTest.class.getResource("NYC_small.osm.pbf").getFile(),
-        StandardCharsets.UTF_8
-      )
-    );
-    OpenStreetMapProvider provider = new OpenStreetMapProvider(file, true);
-    OpenStreetMapModule osmModule = new OpenStreetMapModule(
-      List.of(provider),
-      Set.of(),
-      graph,
-      DataImportIssueStore.NOOP,
-      true
-    );
+    File file = ResourceLoader.of(TriangleInequalityTest.class).file("NYC_small.osm.pbf");
+    OsmProvider provider = new OsmProvider(file, true);
+    OsmModule osmModule = OsmModule.of(provider, graph).withAreaVisibility(true).build();
     osmModule.buildGraph();
   }
 
   @BeforeEach
   public void before() {
-    start = graph.getVertex("osm:node:1919595913");
-    end = graph.getVertex("osm:node:42448554");
+    start = graph.getVertex(VertexLabel.osm(1919595913));
+    end = graph.getVertex(VertexLabel.osm(42448554));
   }
 
   @Test
@@ -193,8 +180,9 @@ public class TriangleInequalityTest {
       preferences
         .withWalk(walk -> walk.withStairsReluctance(1.0).withSpeed(1.0).withReluctance(1.0))
         .withStreet(street -> street.withTurnReluctance(1.0))
-        .withCar(car -> car.withSpeed(1.0).withReluctance(1.0))
+        .withCar(car -> car.withReluctance(1.0))
         .withBike(bike -> bike.withSpeed(1.0).withReluctance(1.0))
+        .withScooter(scooter -> scooter.withSpeed(1.0).withReluctance(1.0))
     );
 
     if (modes != null) {

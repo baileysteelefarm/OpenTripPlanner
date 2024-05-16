@@ -19,6 +19,7 @@ import org.opentripplanner.astar.spi.RemainingWeightHeuristic;
 import org.opentripplanner.astar.spi.SearchTerminationStrategy;
 import org.opentripplanner.astar.spi.SkipEdgeStrategy;
 import org.opentripplanner.astar.spi.TraverseVisitor;
+import org.opentripplanner.framework.application.OTPRequestTimeoutException;
 import org.opentripplanner.framework.time.DateUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -140,8 +141,9 @@ public class AStar<
       }
 
       // Iterate over traversal results. When an edge leads nowhere (as indicated by
-      // returning NULL), the iteration is over.
-      for (State v = edge.traverse(u); v != null; v = v.getNextResult()) {
+      // returning an empty array), the iteration is over.
+      var states = edge.traverse(u);
+      for (var v : states) {
         // Could be: for (State v : traverseEdge...)
 
         if (traverseVisitor != null) {
@@ -182,6 +184,7 @@ public class AStar<
   }
 
   private void runSearch() {
+    OTPRequestTimeoutException.checkForTimeout();
     long abortTime = DateUtils.absoluteTimeout(timeout);
 
     /* the core of the A* algorithm */

@@ -1,21 +1,23 @@
 ## Overview
 
 [![Join the chat at https://gitter.im/opentripplanner/OpenTripPLanner](https://badges.gitter.im/opentripplanner/OpenTripPlanner.svg)](https://gitter.im/opentripplanner/OpenTripPlanner)
+[![codecov](https://codecov.io/gh/opentripplanner/OpenTripPlanner/branch/dev-2.x/graph/badge.svg?token=ak4PbIKgZ1)](https://codecov.io/gh/opentripplanner/OpenTripPlanner)
+[![Docker Pulls](https://img.shields.io/docker/pulls/opentripplanner/opentripplanner)](https://hub.docker.com/r/opentripplanner/opentripplanner)
 
 OpenTripPlanner (OTP) is an open source multi-modal trip planner, focusing on travel by scheduled
 public transportation in combination with bicycling, walking, and mobility services including bike
 share and ride hailing. Its server component runs on any platform with a Java virtual machine (
-including Linux, Mac, and Windows). It exposes REST and GraphQL APIs that can be accessed by various
+including Linux, Mac, and Windows). It exposes GraphQL APIs that can be accessed by various
 clients including open source Javascript components and native mobile applications. It builds its
 representation of the transportation network from open data in open standard file formats (primarily
 GTFS and OpenStreetMap). It applies real-time updates and alerts with immediate visibility to
 clients, finding itineraries that account for disruptions and service changes.
 
 Note that this branch contains **OpenTripPlanner 2**, the second major version of OTP, which has
-been under development since Q2 2018. The latest version of OTP is v2.2.0, released in November 2022.
+been under development since 2018. The latest version of OTP is v2.5.0, released in March 2024.
 
-If you do not want to test or explore this version, please switch to the final 1.x release
-tag `v1.5.0` or the `dev-1.x` branch for any patches and bugfixes applied to the v1.5.0 release.
+If you do not want to use this version, please switch to the final 1.x release
+tag `v1.5.0` or the `dev-1.x` branch.
 
 ## Performance Test
 
@@ -39,7 +41,6 @@ the [main documentation](http://docs.opentripplanner.org/en/dev-2.x/), including
 
 ## Development
 
-[![codecov](https://codecov.io/gh/opentripplanner/OpenTripPlanner/branch/dev-2.x/graph/badge.svg?token=ak4PbIKgZ1)](https://codecov.io/gh/opentripplanner/OpenTripPlanner)
 
 OpenTripPlanner is a collaborative project incorporating code, translation, and documentation from
 contributors around the world. We welcome new contributions.

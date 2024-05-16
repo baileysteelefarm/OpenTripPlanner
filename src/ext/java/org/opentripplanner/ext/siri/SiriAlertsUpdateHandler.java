@@ -1,5 +1,6 @@
 package org.opentripplanner.ext.siri;
 
+import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -45,7 +46,7 @@ public class SiriAlertsUpdateHandler {
   private final Set<TransitAlert> alerts = new HashSet<>();
   private final TransitAlertService transitAlertService;
   /** How long before the posted start of an event it should be displayed to users */
-  private final long earlyStart;
+  private final Duration earlyStart;
   private final AffectsMapper affectsMapper;
 
   public SiriAlertsUpdateHandler(
@@ -53,7 +54,7 @@ public class SiriAlertsUpdateHandler {
     TransitModel transitModel,
     TransitAlertService transitAlertService,
     SiriFuzzyTripMatcher siriFuzzyTripMatcher,
-    long earlyStart
+    Duration earlyStart
   ) {
     this.feedId = feedId;
     this.transitAlertService = transitAlertService;
@@ -140,6 +141,9 @@ public class SiriAlertsUpdateHandler {
     if (situation.getVersionedAtTime() != null) {
       alert.withUpdatedTime(situation.getVersionedAtTime());
     }
+    if (situation.getVersion() != null && situation.getVersion().getValue() != null) {
+      alert.withVersion(situation.getVersion().getValue().intValue());
+    }
 
     ArrayList<TimePeriod> periods = new ArrayList<>();
     if (situation.getValidityPeriods().size() > 0) {
@@ -147,7 +151,9 @@ public class SiriAlertsUpdateHandler {
         final long realStart = activePeriod.getStartTime() != null
           ? getEpochSecond(activePeriod.getStartTime())
           : 0;
-        final long start = activePeriod.getStartTime() != null ? realStart - earlyStart : 0;
+        final long start = activePeriod.getStartTime() != null
+          ? realStart - earlyStart.toSeconds()
+          : 0;
 
         final long realEnd = activePeriod.getEndTime() != null
           ? getEpochSecond(activePeriod.getEndTime())

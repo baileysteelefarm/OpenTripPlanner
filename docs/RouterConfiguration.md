@@ -31,44 +31,44 @@ A full list of them can be found in the [RouteRequest](RouteRequest.md).
 <!-- PARAMETERS-TABLE BEGIN -->
 <!-- NOTE! This section is auto-generated. Do not change, change doc in code instead. -->
 
-| Config Parameter                                                                          |          Type         | Summary                                                                                           |  Req./Opt. | Default Value | Since |
-|-------------------------------------------------------------------------------------------|:---------------------:|---------------------------------------------------------------------------------------------------|:----------:|---------------|:-----:|
-| [configVersion](#configVersion)                                                           |        `string`       | Deployment version of the *router-config.json*.                                                   | *Optional* |               |  2.1  |
-| [requestLogFile](#requestLogFile)                                                         |        `string`       | The path of the log file for the requests.                                                        | *Optional* |               |  2.0  |
-| [streetRoutingTimeout](#streetRoutingTimeout)                                             |       `duration`      | The maximum time a street routing request is allowed to take before returning a timeout.          | *Optional* | `"PT5S"`      |  2.2  |
-| [flex](sandbox/Flex.md)                                                                   |        `object`       | Configuration for flex routing.                                                                   | *Optional* |               |  2.1  |
-| [rideHailingServices](sandbox/RideHailing.md)                                             |       `object[]`      | Configuration for interfaces to external ride hailing services like Uber.                         | *Optional* |               |  2.3  |
-| [routingDefaults](RouteRequest.md)                                                        |        `object`       | The default parameters for the routing query.                                                     | *Optional* |               |  2.0  |
-| timetableUpdates                                                                          |        `object`       | Global configuration for timetable updaters.                                                      | *Optional* |               |  2.2  |
-|    [maxSnapshotFrequency](#timetableUpdates_maxSnapshotFrequency)                         |       `duration`      | How long a snapshot should be cached.                                                             | *Optional* | `"PT1S"`      |  2.2  |
-|    purgeExpiredData                                                                       |       `boolean`       | Should expired realtime data be purged from the graph. Apply to GTFS-RT and Siri updates.         | *Optional* | `true`        |  2.2  |
-| [transit](#transit)                                                                       |        `object`       | Configuration for transit searches with RAPTOR.                                                   | *Optional* |               |   na  |
-|    [iterationDepartureStepInSeconds](#transit_iterationDepartureStepInSeconds)            |       `integer`       | Step for departure times between each RangeRaptor iterations.                                     | *Optional* | `60`          |   na  |
-|    [maxNumberOfTransfers](#transit_maxNumberOfTransfers)                                  |       `integer`       | This parameter is used to allocate enough memory space for Raptor.                                | *Optional* | `12`          |   na  |
-|    [scheduledTripBinarySearchThreshold](#transit_scheduledTripBinarySearchThreshold)      |       `integer`       | This threshold is used to determine when to perform a binary trip schedule search.                | *Optional* | `50`          |   na  |
-|    [searchThreadPoolSize](#transit_searchThreadPoolSize)                                  |       `integer`       | Split a travel search in smaller jobs and run them in parallel to improve performance.            | *Optional* | `0`           |   na  |
-|    [transferCacheMaxSize](#transit_transferCacheMaxSize)                                  |       `integer`       | The maximum number of distinct transfers parameters to cache pre-calculated transfers for.        | *Optional* | `25`          |   na  |
-|    [dynamicSearchWindow](#transit_dynamicSearchWindow)                                    |        `object`       | The dynamic search window coefficients used to calculate the EDT, LAT and SW.                     | *Optional* |               |  2.1  |
-|       [maxWindow](#transit_dynamicSearchWindow_maxWindow)                                 |       `duration`      | Upper limit for the search-window calculation.                                                    | *Optional* | `"PT3H"`      |  2.2  |
-|       [minTransitTimeCoefficient](#transit_dynamicSearchWindow_minTransitTimeCoefficient) |        `double`       | The coefficient to multiply with `minTransitTime`.                                                | *Optional* | `0.5`         |  2.1  |
-|       [minWaitTimeCoefficient](#transit_dynamicSearchWindow_minWaitTimeCoefficient)       |        `double`       | The coefficient to multiply with `minWaitTime`.                                                   | *Optional* | `0.5`         |  2.1  |
-|       [minWindow](#transit_dynamicSearchWindow_minWindow)                                 |       `duration`      | The constant minimum duration for a raptor-search-window.                                         | *Optional* | `"PT40M"`     |  2.2  |
-|       [stepMinutes](#transit_dynamicSearchWindow_stepMinutes)                             |       `integer`       | Used to set the steps the search-window is rounded to.                                            | *Optional* | `10`          |  2.1  |
-|    [pagingSearchWindowAdjustments](#transit_pagingSearchWindowAdjustments)                |      `duration[]`     | The provided array of durations is used to increase the search-window for the next/previous page. | *Optional* |               |   na  |
-|    [stopTransferCost](#transit_stopTransferCost)                                          | `enum map of integer` | Use this to set a stop transfer cost for the given transfer priority                              | *Optional* |               |  2.0  |
-|    [transferCacheRequests](#transit_transferCacheRequests)                                |       `object[]`      | Routing requests to use for pre-filling the stop-to-stop transfer cache.                          | *Optional* |               |  2.3  |
-| transmodelApi                                                                             |        `object`       | Configuration for the Transmodel GraphQL API.                                                     | *Optional* |               |  2.1  |
-|    [hideFeedId](#transmodelApi_hideFeedId)                                                |       `boolean`       | Hide the FeedId in all API output, and add it to input.                                           | *Optional* | `false`       |   na  |
-|    [tracingHeaderTags](#transmodelApi_tracingHeaderTags)                                  |       `string[]`      | Used to group requests when monitoring OTP.                                                       | *Optional* |               |   na  |
-| [updaters](UpdaterConfig.md)                                                              |       `object[]`      | Configuration for the updaters that import various types of data into OTP.                        | *Optional* |               |  1.5  |
-| [vectorTileLayers](sandbox/MapboxVectorTilesApi.md)                                       |       `object[]`      | Configuration of the individual layers for the Mapbox vector tiles.                               | *Optional* |               |  2.0  |
-| vehicleRentalServiceDirectory                                                             |        `object`       | Configuration for the vehicle rental service directory.                                           | *Optional* |               |  2.0  |
-|    language                                                                               |        `string`       | Language code.                                                                                    | *Optional* |               |   na  |
-|    sourcesName                                                                            |        `string`       | Json tag name for updater sources.                                                                | *Optional* | `"systems"`   |   na  |
-|    updaterNetworkName                                                                     |        `string`       | Json tag name for the network name for each source.                                               | *Optional* | `"id"`        |   na  |
-|    updaterUrlName                                                                         |        `string`       | Json tag name for endpoint urls for each source.                                                  | *Optional* | `"url"`       |   na  |
-|    url                                                                                    |         `uri`         | Endpoint for the VehicleRentalServiceDirectory                                                    | *Required* |               |   na  |
-|    [headers](#vehicleRentalServiceDirectory_headers)                                      |    `map of string`    | HTTP headers to add to the request. Any header key, value can be inserted.                        | *Optional* |               |   na  |
+| Config Parameter                                                                          |          Type         | Summary                                                                                               |  Req./Opt. | Default Value | Since |
+|-------------------------------------------------------------------------------------------|:---------------------:|-------------------------------------------------------------------------------------------------------|:----------:|---------------|:-----:|
+| [configVersion](#configVersion)                                                           |        `string`       | Deployment version of the *router-config.json*.                                                       | *Optional* |               |  2.1  |
+| [flex](sandbox/Flex.md)                                                                   |        `object`       | Configuration for flex routing.                                                                       | *Optional* |               |  2.1  |
+| [rideHailingServices](sandbox/RideHailing.md)                                             |       `object[]`      | Configuration for interfaces to external ride hailing services like Uber.                             | *Optional* |               |  2.3  |
+| [routingDefaults](RouteRequest.md)                                                        |        `object`       | The default parameters for the routing query.                                                         | *Optional* |               |  2.0  |
+| [server](#server)                                                                         |        `object`       | Configuration for router server.                                                                      | *Optional* |               |  2.4  |
+|    [apiProcessingTimeout](#server_apiProcessingTimeout)                                   |       `duration`      | Maximum processing time for an API request                                                            | *Optional* | `"PT-1S"`     |  2.4  |
+|    [traceParameters](#server_traceParameters)                                             |       `object[]`      | Trace OTP request using HTTP request/response parameter(s) combined with logging.                     | *Optional* |               |  2.4  |
+|          generateIdIfMissing                                                              |       `boolean`       | If `true` a unique value is generated if no http request header is provided, or the value is missing. | *Optional* | `false`       |  2.4  |
+|          httpRequestHeader                                                                |        `string`       | The header-key to use when fetching the trace parameter value                                         | *Optional* |               |  2.4  |
+|          httpResponseHeader                                                               |        `string`       | The header-key to use when saving the value back into the http response                               | *Optional* |               |  2.4  |
+|          [logKey](#server_traceParameters_0_logKey)                                       |        `string`       | The log event key used.                                                                               | *Optional* |               |  2.4  |
+| timetableUpdates                                                                          |        `object`       | Global configuration for timetable updaters.                                                          | *Optional* |               |  2.2  |
+|    [maxSnapshotFrequency](#timetableUpdates_maxSnapshotFrequency)                         |       `duration`      | How long a snapshot should be cached.                                                                 | *Optional* | `"PT1S"`      |  2.2  |
+|    purgeExpiredData                                                                       |       `boolean`       | Should expired real-time data be purged from the graph. Apply to GTFS-RT and Siri updates.            | *Optional* | `true`        |  2.2  |
+| [transit](#transit)                                                                       |        `object`       | Configuration for transit searches with RAPTOR.                                                       | *Optional* |               |   na  |
+|    [iterationDepartureStepInSeconds](#transit_iterationDepartureStepInSeconds)            |       `integer`       | Step for departure times between each RangeRaptor iterations.                                         | *Optional* | `60`          |   na  |
+|    [maxNumberOfTransfers](#transit_maxNumberOfTransfers)                                  |       `integer`       | This parameter is used to allocate enough memory space for Raptor.                                    | *Optional* | `12`          |   na  |
+|    [maxSearchWindow](#transit_maxSearchWindow)                                            |       `duration`      | Upper limit of the request parameter searchWindow.                                                    | *Optional* | `"PT24H"`     |  2.4  |
+|    [scheduledTripBinarySearchThreshold](#transit_scheduledTripBinarySearchThreshold)      |       `integer`       | This threshold is used to determine when to perform a binary trip schedule search.                    | *Optional* | `50`          |   na  |
+|    [searchThreadPoolSize](#transit_searchThreadPoolSize)                                  |       `integer`       | Split a travel search in smaller jobs and run them in parallel to improve performance.                | *Optional* | `0`           |   na  |
+|    [transferCacheMaxSize](#transit_transferCacheMaxSize)                                  |       `integer`       | The maximum number of distinct transfers parameters to cache pre-calculated transfers for.            | *Optional* | `25`          |   na  |
+|    [dynamicSearchWindow](#transit_dynamicSearchWindow)                                    |        `object`       | The dynamic search window coefficients used to calculate the EDT, LAT and SW.                         | *Optional* |               |  2.1  |
+|       [maxWindow](#transit_dynamicSearchWindow_maxWindow)                                 |       `duration`      | Upper limit for the search-window calculation.                                                        | *Optional* | `"PT3H"`      |  2.2  |
+|       [minTransitTimeCoefficient](#transit_dynamicSearchWindow_minTransitTimeCoefficient) |        `double`       | The coefficient to multiply with `minTransitTime`.                                                    | *Optional* | `0.5`         |  2.1  |
+|       [minWaitTimeCoefficient](#transit_dynamicSearchWindow_minWaitTimeCoefficient)       |        `double`       | The coefficient to multiply with `minWaitTime`.                                                       | *Optional* | `0.5`         |  2.1  |
+|       [minWindow](#transit_dynamicSearchWindow_minWindow)                                 |       `duration`      | The constant minimum duration for a raptor-search-window.                                             | *Optional* | `"PT40M"`     |  2.2  |
+|       [stepMinutes](#transit_dynamicSearchWindow_stepMinutes)                             |       `integer`       | Used to set the steps the search-window is rounded to.                                                | *Optional* | `10`          |  2.1  |
+|    [pagingSearchWindowAdjustments](#transit_pagingSearchWindowAdjustments)                |      `duration[]`     | The provided array of durations is used to increase the search-window for the next/previous page.     | *Optional* |               |   na  |
+|    [stopTransferCost](#transit_stopTransferCost)                                          | `enum map of integer` | Use this to set a stop transfer cost for the given transfer priority                                  | *Optional* |               |  2.0  |
+|    [transferCacheRequests](#transit_transferCacheRequests)                                |       `object[]`      | Routing requests to use for pre-filling the stop-to-stop transfer cache.                              | *Optional* |               |  2.3  |
+| transmodelApi                                                                             |        `object`       | Configuration for the Transmodel GraphQL API.                                                         | *Optional* |               |  2.1  |
+|    [hideFeedId](#transmodelApi_hideFeedId)                                                |       `boolean`       | Hide the FeedId in all API output, and add it to input.                                               | *Optional* | `false`       |   na  |
+|    [tracingHeaderTags](#transmodelApi_tracingHeaderTags)                                  |       `string[]`      | Used to group requests when monitoring OTP.                                                           | *Optional* |               |   na  |
+| [updaters](UpdaterConfig.md)                                                              |       `object[]`      | Configuration for the updaters that import various types of data into OTP.                            | *Optional* |               |  1.5  |
+| [vectorTiles](sandbox/MapboxVectorTilesApi.md)                                            |        `object`       | Vector tile configuration                                                                             | *Optional* |               |   na  |
+| [vehicleRentalServiceDirectory](sandbox/VehicleRentalServiceDirectory.md)                 |        `object`       | Configuration for the vehicle rental service directory.                                               | *Optional* |               |  2.0  |
 
 <!-- PARAMETERS-TABLE END -->
 
@@ -96,55 +96,61 @@ or format check on the version and it can be any string.
 Be aware that OTP uses the config embedded in the loaded graph if no new config is provided.
 
 
-<h3 id="requestLogFile">requestLogFile</h3>
+<h3 id="server">server</h3>
 
-**Since version:** `2.0` ∙ **Type:** `string` ∙ **Cardinality:** `Optional`   
+**Since version:** `2.4` ∙ **Type:** `object` ∙ **Cardinality:** `Optional`   
 **Path:** / 
 
-The path of the log file for the requests.
+Configuration for router server.
 
-You can log some characteristics of trip planning requests in a file for later analysis. Some
-transit agencies and operators find this information useful for identifying existing or unmet
-transportation demand. Logging will be performed only if you specify a log file name in the router
-config.
-
-Each line in the resulting log file will look like this:
-
-```
-2016-04-19T18:23:13.486 0:0:0:0:0:0:0:1 ARRIVE 2016-04-07T00:17 WALK,BUS,CABLE_CAR,TRANSIT,BUSISH 45.559737193889966 -122.64999389648438 45.525592487765635 -122.39044189453124 6095 3 5864 3 6215 3
-```
-
-The fields separated by whitespace are (in order):
-
-1. Date and time the request was received
-2. IP address of the user
-3. Arrive or depart search
-4. The arrival or departure time
-5. A comma-separated list of all transport modes selected
-6. Origin latitude and longitude
-7. Destination latitude and longitude
-
-Finally, for each itinerary returned to the user, there is a travel duration in seconds and the
-number of transit vehicles used in that itinerary.
+These parameters are used to configure the router server. Many parameters are specific to a
+domain, these are set in the routing request.
 
 
-<h3 id="streetRoutingTimeout">streetRoutingTimeout</h3>
+<h3 id="server_apiProcessingTimeout">apiProcessingTimeout</h3>
 
-**Since version:** `2.2` ∙ **Type:** `duration` ∙ **Cardinality:** `Optional` ∙ **Default value:** `"PT5S"`   
-**Path:** / 
+**Since version:** `2.4` ∙ **Type:** `duration` ∙ **Cardinality:** `Optional` ∙ **Default value:** `"PT-1S"`   
+**Path:** /server 
 
-The maximum time a street routing request is allowed to take before returning a timeout.
+Maximum processing time for an API request
 
-In OTP1 path searches sometimes took a long time to complete. With the new Raptor algorithm this is not
-the case anymore. The street part of the routing may still take a long time if searching very long
-distances. You can set the street routing timeout to avoid tying up server resources on pointless
-searches and ensure that your users receive a timely response. You can also limit the max distance
-to search for WALK, BIKE and CAR. When a search times out, a WARN level log entry is made with
-information that can help identify problematic searches and improve our routing methods. There are
-no timeouts for the transit part of the routing search, instead configure a reasonable dynamic
-search-window.
+This timeout limits the server-side processing time for a given API request. This does not include
+network latency nor waiting time in the HTTP server thread pool. The default value is
+`-1s`(no timeout). The timeout is applied to all APIs (REST, Transmodel & GTFS GraphQL).
+The timeout is not enforced when the parallel routing OTP feature is in use.
 
-The search aborts after this duration and any paths found are returned to the client.
+
+<h3 id="server_traceParameters">traceParameters</h3>
+
+**Since version:** `2.4` ∙ **Type:** `object[]` ∙ **Cardinality:** `Optional`   
+**Path:** /server 
+
+Trace OTP request using HTTP request/response parameter(s) combined with logging.
+
+OTP supports tracing user requests across log events and "outside" services. OTP can insert
+http-request-header parameters into all associated log events and into the http response. If the
+value is not present in the request, a unique value can be generated. The OTP generated value is
+a 6 characters long base 36[0-9a-z] character string.
+
+**Use-case Correlation-ID**
+
+A common use-case in a service oriented environment is to use a _correlation-id_ to identify all log
+messages across multiple (micro-)services from the same user. This is done by setting the
+"X-Correlation-ID" http header in the http facade/gateway. Use the "traceParameters" to configure
+OTP to pick up the correlation id, insert it into the logs and return it. See the example below
+on how-to configure the "server.traceParameters" instance.
+
+
+<h3 id="server_traceParameters_0_logKey">logKey</h3>
+
+**Since version:** `2.4` ∙ **Type:** `string` ∙ **Cardinality:** `Optional`   
+**Path:** /server/traceParameters/[0] 
+
+The log event key used.
+
+OTP stores the key/value pair in the log MDC(Mapped Diagnostic Context). To use it you normally
+include the key in the log pattern like this: `%X{LOG-KEY}`. See your log framework for details.
+Only log4j and logback support this.
 
 
 <h3 id="timetableUpdates_maxSnapshotFrequency">maxSnapshotFrequency</h3>
@@ -191,6 +197,22 @@ This parameter is used to allocate enough memory space for Raptor.
 Set it to the maximum number of transfers for any given itinerary expected to be found within the
 entire transit network. The memory overhead of setting this higher than the maximum number of
 transfers is very little so it is better to set it too high than to low.
+
+
+<h3 id="transit_maxSearchWindow">maxSearchWindow</h3>
+
+**Since version:** `2.4` ∙ **Type:** `duration` ∙ **Cardinality:** `Optional` ∙ **Default value:** `"PT24H"`   
+**Path:** /transit 
+
+Upper limit of the request parameter searchWindow.
+
+Maximum search window that can be set through the searchWindow API parameter.
+Due to the way timetable data are collected before a Raptor trip search,
+using a search window larger than 24 hours may lead to inconsistent search results.
+Limiting the search window prevents also potential performance issues.
+The recommended maximum value is 24 hours.
+This parameter does not restrict the maximum duration of a dynamic search window (use
+the parameter `transit.dynamicSearchWindow.maxWindow` to specify such a restriction).
 
 
 <h3 id="transit_scheduledTripBinarySearchThreshold">scheduledTripBinarySearchThreshold</h3>
@@ -404,13 +426,6 @@ Only turn this feature on if you have unique ids across all feeds, without the f
 
 Used to group requests when monitoring OTP.
 
-<h3 id="vehicleRentalServiceDirectory_headers">headers</h3>
-
-**Since version:** `na` ∙ **Type:** `map of string` ∙ **Cardinality:** `Optional`   
-**Path:** /vehicleRentalServiceDirectory 
-
-HTTP headers to add to the request. Any header key, value can be inserted.
-
 
 <!-- PARAMETERS-DETAILS END -->
 
@@ -423,34 +438,85 @@ HTTP headers to add to the request. Any header key, value can be inserted.
 ```JSON
 // router-config.json
 {
-  "configVersion" : "v2.3.0-EN000121",
-  "streetRoutingTimeout" : "5s",
+  "configVersion" : "v2.4.0-EN000121",
+  "server" : {
+    "apiProcessingTimeout" : "7s",
+    "traceParameters" : [
+      {
+        "httpRequestHeader" : "X-Correlation-ID",
+        "httpResponseHeader" : "X-Correlation-ID",
+        "logKey" : "correlationId",
+        "generateIdIfMissing" : true
+      }
+    ]
+  },
   "routingDefaults" : {
-    "walkSpeed" : 1.3,
-    "bikeSpeed" : 5,
-    "carSpeed" : 40,
     "numItineraries" : 12,
     "transferPenalty" : 0,
-    "walkReluctance" : 4.0,
-    "bikeReluctance" : 5.0,
-    "bikeWalkingReluctance" : 10.0,
-    "bikeStairsReluctance" : 150.0,
-    "carReluctance" : 10.0,
-    "stairsReluctance" : 1.65,
     "turnReluctance" : 1.0,
     "elevatorBoardTime" : 90,
     "elevatorBoardCost" : 90,
     "elevatorHopTime" : 20,
     "elevatorHopCost" : 20,
-    "bikeRentalPickupCost" : 120,
-    "bikeRentalDropoffTime" : 30,
-    "bikeRentalDropoffCost" : 30,
-    "bikeParkTime" : 60,
-    "bikeParkCost" : 120,
-    "carDropoffTime" : 120,
+    "bicycle" : {
+      "speed" : 5,
+      "reluctance" : 5.0,
+      "boardCost" : 600,
+      "walk" : {
+        "reluctance" : 10.0,
+        "stairsReluctance" : 150.0
+      },
+      "rental" : {
+        "pickupCost" : 120,
+        "dropOffTime" : "30s",
+        "dropOffCost" : 30
+      },
+      "parking" : {
+        "time" : "1m",
+        "cost" : 120
+      },
+      "triangle" : {
+        "safety" : 0.4,
+        "flatness" : 0.3,
+        "time" : 0.3
+      }
+    },
+    "car" : {
+      "reluctance" : 10,
+      "decelerationSpeed" : 2.9,
+      "accelerationSpeed" : 2.9,
+      "rental" : {
+        "pickupCost" : 120,
+        "dropOffTime" : "30s",
+        "dropOffCost" : 30
+      },
+      "parking" : {
+        "time" : "5m",
+        "cost" : 600
+      }
+    },
+    "scooter" : {
+      "speed" : 5,
+      "reluctance" : 5.0,
+      "rental" : {
+        "pickupCost" : 120,
+        "dropOffTime" : "30s",
+        "dropOffCost" : 30
+      },
+      "triangle" : {
+        "safety" : 0.4,
+        "flatness" : 0.3,
+        "time" : 0.3
+      }
+    },
+    "walk" : {
+      "speed" : 1.3,
+      "reluctance" : 4.0,
+      "stairsReluctance" : 1.65,
+      "boardCost" : 600,
+      "escalatorReluctance" : 1.5
+    },
     "waitReluctance" : 1.0,
-    "walkBoardCost" : 600,
-    "bikeBoardCost" : 600,
     "otherThanPreferredRoutesPenalty" : 300,
     "transferSlack" : 120,
     "boardSlackForMode" : {
@@ -462,20 +528,31 @@ HTTP headers to add to the request. Any header key, value can be inserted.
     "transitReluctanceForMode" : {
       "RAIL" : 0.85
     },
-    "maxAccessEgressDurationForMode" : {
-      "BIKE_RENTAL" : "20m"
+    "accessEgress" : {
+      "maxDuration" : "45m",
+      "maxDurationForMode" : {
+        "BIKE_RENTAL" : "20m"
+      },
+      "maxStopCount" : 500,
+      "penalty" : {
+        "FLEXIBLE" : {
+          "timePenalty" : "2m + 1.1t",
+          "costFactor" : 1.7
+        }
+      }
     },
     "itineraryFilters" : {
       "transitGeneralizedCostLimit" : {
-        "costLimitFunction" : "900 + 1.5 x",
+        "costLimitFunction" : "15m + 1.5 x",
         "intervalRelaxFactor" : 0.4
       },
+      "nonTransitGeneralizedCostLimit" : "400 + 1.5x",
+      "removeTransitWithHigherCostThanBestOnStreetOnly" : "60 + 1.3x",
       "bikeRentalDistanceRatio" : 0.3,
       "accessibilityScore" : true,
-      "minBikeParkingDistance" : 300
+      "minBikeParkingDistance" : 300,
+      "debug" : "limit-to-search-window"
     },
-    "carDecelerationSpeed" : 2.9,
-    "carAccelerationSpeed" : 2.9,
     "ignoreRealtimeUpdates" : false,
     "geoidElevation" : false,
     "maxJourneyDuration" : "36h",
@@ -487,7 +564,8 @@ HTTP headers to add to the request. Any header key, value can be inserted.
         "HSL:456"
       ]
     },
-    "unpreferredCost" : "600 + 2.0 x",
+    "unpreferredCost" : "10m + 2.0 x",
+    "streetRoutingTimeout" : "5s",
     "transferOptimization" : {
       "optimizeTransferWaitTime" : true,
       "minSafeWaitTimeFactor" : 5.0,
@@ -560,58 +638,69 @@ HTTP headers to add to the request. Any header key, value can be inserted.
   "transmodelApi" : {
     "hideFeedId" : true
   },
-  "vectorTileLayers" : [
-    {
-      "name" : "stops",
-      "type" : "Stop",
-      "mapper" : "Digitransit",
-      "maxZoom" : 20,
-      "minZoom" : 14,
-      "cacheMaxSeconds" : 600
-    },
-    {
-      "name" : "stations",
-      "type" : "Station",
-      "mapper" : "Digitransit",
-      "maxZoom" : 20,
-      "minZoom" : 12,
-      "cacheMaxSeconds" : 600
-    },
-    {
-      "name" : "rentalPlaces",
-      "type" : "VehicleRental",
-      "mapper" : "Digitransit",
-      "maxZoom" : 20,
-      "minZoom" : 14,
-      "cacheMaxSeconds" : 60,
-      "expansionFactor" : 0.25
-    },
-    {
-      "name" : "rentalVehicle",
-      "type" : "VehicleRentalVehicle",
-      "mapper" : "Digitransit",
-      "maxZoom" : 20,
-      "minZoom" : 14,
-      "cacheMaxSeconds" : 60
-    },
-    {
-      "name" : "rentalStation",
-      "type" : "VehicleRentalStation",
-      "mapper" : "Digitransit",
-      "maxZoom" : 20,
-      "minZoom" : 14,
-      "cacheMaxSeconds" : 600
-    },
-    {
-      "name" : "vehicleParking",
-      "type" : "VehicleParking",
-      "mapper" : "Digitransit",
-      "maxZoom" : 20,
-      "minZoom" : 14,
-      "cacheMaxSeconds" : 60,
-      "expansionFactor" : 0.25
-    }
-  ],
+  "vectorTiles" : {
+    "basePath" : "/otp_ct/vectorTiles",
+    "layers" : [
+      {
+        "name" : "stops",
+        "type" : "Stop",
+        "mapper" : "Digitransit",
+        "maxZoom" : 20,
+        "minZoom" : 14,
+        "cacheMaxSeconds" : 600
+      },
+      {
+        "name" : "areaStops",
+        "type" : "AreaStop",
+        "mapper" : "OTPRR",
+        "maxZoom" : 20,
+        "minZoom" : 14,
+        "cacheMaxSeconds" : 600
+      },
+      {
+        "name" : "stations",
+        "type" : "Station",
+        "mapper" : "Digitransit",
+        "maxZoom" : 20,
+        "minZoom" : 12,
+        "cacheMaxSeconds" : 600
+      },
+      {
+        "name" : "rentalPlaces",
+        "type" : "VehicleRental",
+        "mapper" : "Digitransit",
+        "maxZoom" : 20,
+        "minZoom" : 14,
+        "cacheMaxSeconds" : 60,
+        "expansionFactor" : 0.25
+      },
+      {
+        "name" : "rentalVehicle",
+        "type" : "VehicleRentalVehicle",
+        "mapper" : "Digitransit",
+        "maxZoom" : 20,
+        "minZoom" : 14,
+        "cacheMaxSeconds" : 60
+      },
+      {
+        "name" : "rentalStation",
+        "type" : "VehicleRentalStation",
+        "mapper" : "Digitransit",
+        "maxZoom" : 20,
+        "minZoom" : 14,
+        "cacheMaxSeconds" : 600
+      },
+      {
+        "name" : "vehicleParking",
+        "type" : "VehicleParking",
+        "mapper" : "Digitransit",
+        "maxZoom" : 20,
+        "minZoom" : 14,
+        "cacheMaxSeconds" : 60,
+        "expansionFactor" : 0.25
+      }
+    ]
+  },
   "timetableUpdates" : {
     "purgeExpiredData" : false,
     "maxSnapshotFrequency" : "2s"
@@ -619,7 +708,7 @@ HTTP headers to add to the request. Any header key, value can be inserted.
   "updaters" : [
     {
       "type" : "real-time-alerts",
-      "frequencySec" : 30,
+      "frequency" : "30s",
       "url" : "http://developer.trimet.org/ws/V1/FeedSpecAlerts/appID/0123456789ABCDEF",
       "feedId" : "TriMet",
       "headers" : {
@@ -631,8 +720,8 @@ HTTP headers to add to the request. Any header key, value can be inserted.
       "network" : "socialbicycles_coast",
       "sourceType" : "gbfs",
       "language" : "en",
-      "frequencySec" : 60,
-      "allowKeepingRentedBicycleAtDestination" : false,
+      "frequency" : "1m",
+      "allowKeepingRentedVehicleAtDestination" : false,
       "geofencingZones" : false,
       "url" : "http://coast.socialbicycles.com/opendata/gbfs.json",
       "headers" : {
@@ -656,7 +745,7 @@ HTTP headers to add to the request. Any header key, value can be inserted.
       "sourceType" : "park-api",
       "feedId" : "parkapi",
       "timeZone" : "Europe/Berlin",
-      "frequencySec" : 600,
+      "frequency" : "10m",
       "url" : "https://foo.bar",
       "headers" : {
         "Cache-Control" : "max-age=604800"
@@ -677,7 +766,7 @@ HTTP headers to add to the request. Any header key, value can be inserted.
     },
     {
       "type" : "stop-time-updater",
-      "frequencySec" : 60,
+      "frequency" : "1m",
       "backwardsDelayPropagationType" : "REQUIRED_NO_DATA",
       "url" : "http://developer.trimet.org/ws/V1/TripUpdate/appID/0123456789ABCDEF",
       "feedId" : "TriMet",
@@ -686,24 +775,41 @@ HTTP headers to add to the request. Any header key, value can be inserted.
       }
     },
     {
+      "type" : "mqtt-gtfs-rt-updater",
+      "url" : "tcp://pred.rt.hsl.fi",
+      "topic" : "gtfsrt/v2/fi/hsl/tu",
+      "feedId" : "HSL",
+      "fuzzyTripMatching" : true
+    },
+    {
       "type" : "vehicle-positions",
       "url" : "https://s3.amazonaws.com/kcm-alerts-realtime-prod/vehiclepositions.pb",
       "feedId" : "1",
-      "frequencySec" : 60,
+      "frequency" : "1m",
       "headers" : {
         "Header-Name" : "Header-Value"
-      }
-    },
-    {
-      "type" : "websocket-gtfs-rt-updater"
+      },
+      "fuzzyTripMatching" : false,
+      "features" : [
+        "position"
+      ]
     },
     {
       "type" : "siri-et-updater",
       "url" : "https://example.com/some/path",
       "feedId" : "feed_id",
-      "timeoutSec" : 30,
+      "timeout" : "30s",
       "headers" : {
         "Authorization" : "Some-Token"
+      }
+    },
+    {
+      "type" : "siri-sx-updater",
+      "url" : "https://example.com/some/path",
+      "feedId" : "feed_id",
+      "timeout" : "30s",
+      "headers" : {
+        "Key" : "Value"
       }
     },
     {
@@ -718,6 +824,20 @@ HTTP headers to add to the request. Any header key, value can be inserted.
         "toDateTime" : "P1D",
         "timeout" : 300000
       }
+    },
+    {
+      "type" : "siri-azure-et-updater",
+      "topic" : "some_topic",
+      "authenticationType" : "SharedAccessKey",
+      "fullyQualifiedNamespace" : "fully_qualified_namespace",
+      "servicebus-url" : "service_bus_url",
+      "feedId" : "feed_id",
+      "customMidnight" : 4,
+      "history" : {
+        "url" : "endpoint_url",
+        "fromDateTime" : "-P1D",
+        "timeout" : 300000
+      }
     }
   ],
   "rideHailingServices" : [
@@ -725,7 +845,11 @@ HTTP headers to add to the request. Any header key, value can be inserted.
       "type" : "uber-car-hailing",
       "clientId" : "secret-id",
       "clientSecret" : "very-secret",
-      "wheelchairAccessibleRideType" : "car"
+      "wheelchairAccessibleProductId" : "545de0c4-659f-49c6-be65-0d5e448dffd5",
+      "bannedProductIds" : [
+        "1196d0dd-423b-4a81-a1d8-615367d3a365",
+        "f58761e5-8dd5-4940-a472-872f1236c596"
+      ]
     }
   ]
 }

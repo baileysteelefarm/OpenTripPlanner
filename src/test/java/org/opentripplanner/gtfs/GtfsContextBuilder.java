@@ -17,6 +17,7 @@ import org.opentripplanner.model.impl.OtpTransitServiceBuilder;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.transit.model.framework.Deduplicator;
 import org.opentripplanner.transit.model.site.StopTransferPriority;
+import org.opentripplanner.transit.service.StopModel;
 
 /**
  * This class helps building GtfsContext and post process the GtfsDao by repairing
@@ -28,7 +29,6 @@ public class GtfsContextBuilder {
   private final GtfsFeedId feedId;
 
   private final OtpTransitServiceBuilder transitBuilder;
-  private final boolean repairStopTimesAndGenerateTripPatterns = true;
   private CalendarService calendarService = null;
   private DataImportIssueStore issueStore = null;
   private Deduplicator deduplicator;
@@ -38,15 +38,17 @@ public class GtfsContextBuilder {
     this.transitBuilder = transitBuilder;
   }
 
-  public static GtfsContextBuilder contextBuilder(String path) throws IOException {
-    return contextBuilder(null, path);
+  public static GtfsContextBuilder contextBuilder(File file) throws IOException {
+    return contextBuilder(null, file);
   }
 
-  public static GtfsContextBuilder contextBuilder(@Nullable String defaultFeedId, String path)
+  public static GtfsContextBuilder contextBuilder(@Nullable String defaultFeedId, File path)
     throws IOException {
+    var transitBuilder = new OtpTransitServiceBuilder(new StopModel(), DataImportIssueStore.NOOP);
     GtfsImport gtfsImport = gtfsImport(defaultFeedId, path);
     GtfsFeedId feedId = gtfsImport.getFeedId();
     var mapper = new GTFSToOtpTransitServiceMapper(
+      transitBuilder,
       feedId.getId(),
       DataImportIssueStore.NOOP,
       false,
@@ -55,13 +57,8 @@ public class GtfsContextBuilder {
     );
     mapper.mapStopTripAndRouteDataIntoBuilder();
     mapper.mapAndAddTransfersToBuilder();
-    OtpTransitServiceBuilder transitBuilder = mapper.getBuilder();
     return new GtfsContextBuilder(feedId, transitBuilder)
       .withDataImportIssueStore(DataImportIssueStore.NOOP);
-  }
-
-  public GtfsFeedId getFeedId() {
-    return feedId;
   }
 
   public OtpTransitServiceBuilder getTransitBuilder() {
@@ -84,7 +81,7 @@ public class GtfsContextBuilder {
     return this;
   }
 
-  public GtfsContextBuilder withDeduplicator(Deduplicator deduplicator) {
+  private GtfsContextBuilder withDeduplicator(Deduplicator deduplicator) {
     this.deduplicator = deduplicator;
     return this;
   }
@@ -92,15 +89,12 @@ public class GtfsContextBuilder {
   /**
    * This method will:
    * <ol>
-   *     <li>repair stop-times (if enabled)</li>
    *     <li>generate TripPatterns (if enabled)</li>
    *     <li>create a new context</li>
    * </ol>
    */
   public GtfsContext build() {
-    if (repairStopTimesAndGenerateTripPatterns) {
-      repairStopTimesAndGenerateTripPatterns();
-    }
+    repairStopTimesAndGenerateTripPatterns();
     return new GtfsContextImpl(feedId, transitBuilder);
   }
 
@@ -131,8 +125,8 @@ public class GtfsContextBuilder {
 
   /* private stuff */
 
-  private static GtfsImport gtfsImport(String defaultFeedId, String path) throws IOException {
-    return new GtfsImport(defaultFeedId, new File(path));
+  private static GtfsImport gtfsImport(String defaultFeedId, File file) throws IOException {
+    return new GtfsImport(defaultFeedId, file);
   }
 
   private void repairStopTimesForEachTrip() {

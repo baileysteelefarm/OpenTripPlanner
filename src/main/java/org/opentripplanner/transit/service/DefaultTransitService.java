@@ -10,10 +10,15 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.locationtech.jts.geom.Envelope;
 import org.opentripplanner.ext.flex.FlexIndex;
+import org.opentripplanner.framework.application.OTPRequestTimeoutException;
 import org.opentripplanner.model.FeedInfo;
 import org.opentripplanner.model.PathTransfer;
 import org.opentripplanner.model.StopTimesInPattern;
@@ -36,6 +41,7 @@ import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.organization.Agency;
 import org.opentripplanner.transit.model.organization.Operator;
 import org.opentripplanner.transit.model.site.AreaStop;
+import org.opentripplanner.transit.model.site.GroupStop;
 import org.opentripplanner.transit.model.site.MultiModalStation;
 import org.opentripplanner.transit.model.site.RegularStop;
 import org.opentripplanner.transit.model.site.Station;
@@ -76,6 +82,7 @@ public class DefaultTransitService implements TransitEditorService {
 
   @Override
   public Collection<Agency> getAgencies() {
+    OTPRequestTimeoutException.checkForTimeout();
     return this.transitModel.getAgencies();
   }
 
@@ -116,11 +123,13 @@ public class DefaultTransitService implements TransitEditorService {
 
   @Override
   public Collection<TripPattern> getAllTripPatterns() {
+    OTPRequestTimeoutException.checkForTimeout();
     return this.transitModel.getAllTripPatterns();
   }
 
   @Override
   public Collection<Notice> getNotices() {
+    OTPRequestTimeoutException.checkForTimeout();
     return this.transitModel.getNoticesByElement().values();
   }
 
@@ -136,6 +145,7 @@ public class DefaultTransitService implements TransitEditorService {
 
   @Override
   public Collection<Station> getStations() {
+    OTPRequestTimeoutException.checkForTimeout();
     return this.transitModel.getStopModel().listStations();
   }
 
@@ -178,21 +188,25 @@ public class DefaultTransitService implements TransitEditorService {
 
   @Override
   public Set<Route> getRoutesForStop(StopLocation stop) {
+    OTPRequestTimeoutException.checkForTimeout();
     return this.transitModelIndex.getRoutesForStop(stop);
   }
 
   @Override
   public Collection<TripPattern> getPatternsForStop(StopLocation stop) {
+    OTPRequestTimeoutException.checkForTimeout();
     return this.transitModelIndex.getPatternsForStop(stop);
   }
 
   @Override
   public Collection<Trip> getTripsForStop(StopLocation stop) {
+    OTPRequestTimeoutException.checkForTimeout();
     return this.transitModelIndex.getTripsForStop(stop);
   }
 
   @Override
   public Collection<Operator> getAllOperators() {
+    OTPRequestTimeoutException.checkForTimeout();
     return this.transitModelIndex.getAllOperators();
   }
 
@@ -203,12 +217,20 @@ public class DefaultTransitService implements TransitEditorService {
 
   @Override
   public Collection<StopLocation> listStopLocations() {
+    OTPRequestTimeoutException.checkForTimeout();
     return transitModel.getStopModel().listStopLocations();
   }
 
   @Override
   public Collection<RegularStop> listRegularStops() {
+    OTPRequestTimeoutException.checkForTimeout();
     return transitModel.getStopModel().listRegularStops();
+  }
+
+  @Override
+  public Collection<GroupStop> listGroupStops() {
+    OTPRequestTimeoutException.checkForTimeout();
+    return transitModel.getStopModel().listGroupStops();
   }
 
   @Override
@@ -217,7 +239,13 @@ public class DefaultTransitService implements TransitEditorService {
   }
 
   @Override
+  public Collection<StopLocation> getStopOrChildStops(FeedScopedId id) {
+    return transitModel.getStopModel().findStopOrChildStops(id);
+  }
+
+  @Override
   public Collection<StopLocationsGroup> listStopLocationGroups() {
+    OTPRequestTimeoutException.checkForTimeout();
     return transitModel.getStopModel().listStopLocationGroups();
   }
 
@@ -233,11 +261,13 @@ public class DefaultTransitService implements TransitEditorService {
 
   @Override
   public Collection<Trip> getAllTrips() {
+    OTPRequestTimeoutException.checkForTimeout();
     return transitModelIndex.getTripForId().values();
   }
 
   @Override
   public Collection<Route> getAllRoutes() {
+    OTPRequestTimeoutException.checkForTimeout();
     return this.transitModelIndex.getAllRoutes();
   }
 
@@ -257,6 +287,7 @@ public class DefaultTransitService implements TransitEditorService {
 
   @Override
   public Collection<TripPattern> getPatternsForRoute(Route route) {
+    OTPRequestTimeoutException.checkForTimeout();
     return this.transitModelIndex.getPatternsForRoute().get(route);
   }
 
@@ -290,6 +321,7 @@ public class DefaultTransitService implements TransitEditorService {
     ArrivalDeparture arrivalDeparture,
     boolean includeCancelledTrips
   ) {
+    OTPRequestTimeoutException.checkForTimeout();
     return StopTimesHelper.stopTimesForStop(
       this,
       stop,
@@ -315,6 +347,7 @@ public class DefaultTransitService implements TransitEditorService {
     ArrivalDeparture arrivalDeparture,
     boolean includeCancellations
   ) {
+    OTPRequestTimeoutException.checkForTimeout();
     return StopTimesHelper.stopTimesForStop(
       this,
       stop,
@@ -349,6 +382,7 @@ public class DefaultTransitService implements TransitEditorService {
     ArrivalDeparture arrivalDeparture,
     boolean includeCancellations
   ) {
+    OTPRequestTimeoutException.checkForTimeout();
     return StopTimesHelper.stopTimesForPatternAtStop(
       this,
       stop,
@@ -377,11 +411,13 @@ public class DefaultTransitService implements TransitEditorService {
 
   @Override
   public Collection<GroupOfRoutes> getGroupsOfRoutes() {
+    OTPRequestTimeoutException.checkForTimeout();
     return transitModelIndex.getRoutesForGroupOfRoutes().keySet();
   }
 
   @Override
   public Collection<Route> getRoutesForGroupOfRoutes(GroupOfRoutes groupOfRoutes) {
+    OTPRequestTimeoutException.checkForTimeout();
     return transitModelIndex.getRoutesForGroupOfRoutes().get(groupOfRoutes);
   }
 
@@ -397,6 +433,7 @@ public class DefaultTransitService implements TransitEditorService {
    */
   @Override
   public Timetable getTimetableForTripPattern(TripPattern tripPattern, LocalDate serviceDate) {
+    OTPRequestTimeoutException.checkForTimeout();
     TimetableSnapshot timetableSnapshot = lazyGetTimeTableSnapShot();
     return timetableSnapshot != null
       ? timetableSnapshot.resolve(tripPattern, serviceDate)
@@ -435,15 +472,6 @@ public class DefaultTransitService implements TransitEditorService {
 
   @Override
   public TripOnServiceDate getTripOnServiceDateById(FeedScopedId datedServiceJourneyId) {
-    TimetableSnapshot timetableSnapshot = lazyGetTimeTableSnapShot();
-    if (timetableSnapshot != null) {
-      TripOnServiceDate tripOnServiceDate = timetableSnapshot
-        .getRealtimeAddedTripOnServiceDate()
-        .get(datedServiceJourneyId);
-      if (tripOnServiceDate != null) {
-        return tripOnServiceDate;
-      }
-    }
     return transitModelIndex.getTripOnServiceDateById().get(datedServiceJourneyId);
   }
 
@@ -456,15 +484,6 @@ public class DefaultTransitService implements TransitEditorService {
   public TripOnServiceDate getTripOnServiceDateForTripAndDay(
     TripIdAndServiceDate tripIdAndServiceDate
   ) {
-    TimetableSnapshot timetableSnapshot = lazyGetTimeTableSnapShot();
-    if (timetableSnapshot != null) {
-      TripOnServiceDate tripOnServiceDate = timetableSnapshot
-        .getRealtimeAddedTripOnServiceDateByTripIdAndServiceDate()
-        .get(tripIdAndServiceDate);
-      if (tripOnServiceDate != null) {
-        return tripOnServiceDate;
-      }
-    }
     return transitModelIndex.getTripOnServiceDateForTripAndDay().get(tripIdAndServiceDate);
   }
 
@@ -485,11 +504,13 @@ public class DefaultTransitService implements TransitEditorService {
 
   @Override
   public TransitLayer getTransitLayer() {
+    OTPRequestTimeoutException.checkForTimeout();
     return this.transitModel.getTransitLayer();
   }
 
   @Override
   public TransitLayer getRealtimeTransitLayer() {
+    OTPRequestTimeoutException.checkForTimeout();
     return this.transitModel.getRealtimeTransitLayer();
   }
 
@@ -529,18 +550,44 @@ public class DefaultTransitService implements TransitEditorService {
   }
 
   @Override
-  public Collection<RegularStop> findRegularStop(Envelope envelope) {
+  public Collection<RegularStop> findRegularStops(Envelope envelope) {
+    OTPRequestTimeoutException.checkForTimeout();
     return transitModel.getStopModel().findRegularStops(envelope);
   }
 
   @Override
   public Collection<AreaStop> findAreaStops(Envelope envelope) {
-    return transitModel.getStopModel().queryLocationIndex(envelope);
+    OTPRequestTimeoutException.checkForTimeout();
+    return transitModel.getStopModel().findAreaStops(envelope);
   }
 
   @Override
   public GraphUpdaterStatus getUpdaterStatus() {
     return transitModel.getUpdaterManager();
+  }
+
+  @Override
+  public List<TransitMode> getModesOfStopLocationsGroup(StopLocationsGroup station) {
+    return sortByOccurrenceAndReduce(
+      station.getChildStops().stream().flatMap(this::getPatternModesOfStop)
+    )
+      .toList();
+  }
+
+  @Override
+  public List<TransitMode> getModesOfStopLocation(StopLocation stop) {
+    return sortByOccurrenceAndReduce(getPatternModesOfStop(stop)).toList();
+  }
+
+  /**
+   * For each pattern visiting this {@link StopLocation} return its {@link TransitMode}
+   */
+  private Stream<TransitMode> getPatternModesOfStop(StopLocation stop) {
+    if (stop.getGtfsVehicleType() != null) {
+      return Stream.of(stop.getGtfsVehicleType());
+    } else {
+      return getPatternsForStop(stop).stream().map(TripPattern::getMode);
+    }
   }
 
   @Override
@@ -551,5 +598,20 @@ public class DefaultTransitService implements TransitEditorService {
   @Override
   public boolean transitFeedCovers(Instant dateTime) {
     return transitModel.transitFeedCovers(dateTime);
+  }
+
+  /**
+   * Take a stream of T, count the occurrences of each value and return it in order of frequency
+   * from high to low.
+   * <p>
+   * Example: [a,b,b,c,c,c] will return [c,b,a]
+   */
+  private static <T> Stream<T> sortByOccurrenceAndReduce(Stream<T> input) {
+    return input
+      .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+      .entrySet()
+      .stream()
+      .sorted(Map.Entry.<T, Long>comparingByValue().reversed())
+      .map(Map.Entry::getKey);
   }
 }

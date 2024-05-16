@@ -5,6 +5,7 @@ import static org.opentripplanner.standalone.config.framework.json.ConfigType.EN
 import static org.opentripplanner.standalone.config.framework.json.ConfigType.ENUM_MAP;
 import static org.opentripplanner.standalone.config.framework.json.ConfigType.ENUM_SET;
 import static org.opentripplanner.standalone.config.framework.json.ConfigType.MAP;
+import static org.opentripplanner.standalone.config.framework.json.NodeInfo.EXPERIMENTAL_FEATURE;
 
 import java.util.EnumSet;
 
@@ -18,6 +19,7 @@ class NodeInfoBuilder {
   private OtpVersion since = OtpVersion.NA;
   private String summary = "TODO: Add short summary.";
   private String description = null;
+  private boolean experimentalFeature = false;
   private String defaultValue = null;
   private boolean required = true;
   private boolean skipChildren = false;
@@ -46,6 +48,13 @@ class NodeInfoBuilder {
     return this;
   }
 
+  /**
+   * Allow parent to set the `since` property of children without version.
+   */
+  OtpVersion since() {
+    return since;
+  }
+
   public NodeInfoBuilder withSummary(String summary) {
     this.summary = summary;
     return this;
@@ -53,6 +62,21 @@ class NodeInfoBuilder {
 
   NodeInfoBuilder withDescription(String description) {
     this.description = description;
+    return this;
+  }
+
+  String description() {
+    if (!experimentalFeature) {
+      return description;
+    }
+    if (description == null) {
+      return EXPERIMENTAL_FEATURE;
+    }
+    return description + "\n\n" + EXPERIMENTAL_FEATURE;
+  }
+
+  NodeInfoBuilder withExperimentalFeature() {
+    this.experimentalFeature = true;
     return this;
   }
 
@@ -112,7 +136,7 @@ class NodeInfoBuilder {
     return new NodeInfo(
       name,
       summary,
-      description,
+      description(),
       type,
       enumType,
       elementType,

@@ -42,6 +42,11 @@ class NodeInfoTest {
   }
 
   @Test
+  void since() {
+    assertEquals(OtpVersion.V2_2, subject.since());
+  }
+
+  @Test
   void testToString() {
     assertEquals("Name : string = \"Default-Value\" Since 2.2", subject.toString());
   }
@@ -71,6 +76,15 @@ class NodeInfoTest {
       createBuilder().withEnumMap(AnEnum.class, ConfigType.OBJECT).build().typeDescription()
     );
     assertEquals("enum set", createBuilder().withEnumSet(AnEnum.class).build().typeDescription());
+  }
+
+  @Test
+  void experimentalFeature() {
+    var subject = createBuilder().withExperimentalFeature().build();
+    assertEquals(NodeInfo.EXPERIMENTAL_FEATURE, subject.description());
+
+    subject = createBuilder().withDescription("Description").withExperimentalFeature().build();
+    assertEquals("Description\n\n" + NodeInfo.EXPERIMENTAL_FEATURE, subject.description());
   }
 
   private NodeInfoBuilder createBuilder() {

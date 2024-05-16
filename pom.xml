@@ -7,7 +7,7 @@
     <url>https://opentripplanner.org</url>
     <groupId>org.opentripplanner</groupId>
     <artifactId>otp</artifactId>
-    <version>2.4.0-SNAPSHOT</version>
+    <version>2.5.0</version>
     <packaging>jar</packaging>
 
     <licenses>
@@ -56,22 +56,21 @@
 
 
     <properties>
-        <otp.serialization.version.id>99</otp.serialization.version.id>
+        <otp.serialization.version.id>148</otp.serialization.version.id>
         <!-- Lib versions - keep list sorted on property name -->
-        <geotools.version>29.0</geotools.version>
-        <google.dagger.version>2.45</google.dagger.version>
-        <jackson.version>2.14.2</jackson.version>
-        <jersey.version>3.1.1</jersey.version>
-        <junit.version>5.9.2</junit.version>
-        <micrometer.version>1.10.6</micrometer.version>
+        <geotools.version>30.2</geotools.version>
+        <google.dagger.version>2.51</google.dagger.version>
+        <jackson.version>2.16.2</jackson.version>
+        <jersey.version>3.1.5</jersey.version>
+        <junit.version>5.10.2</junit.version>
+        <micrometer.version>1.12.3</micrometer.version>
         <netcdf4.version>5.5.3</netcdf4.version>
-        <netty.version>4.1.74.Final</netty.version>
-        <logback.version>1.4.7</logback.version>
-        <lucene.version>9.5.0</lucene.version>
-        <slf4j.version>2.0.7</slf4j.version>
-        <netex-java-model.version>2.0.14</netex-java-model.version>
-        <siri-java-model.version>1.21</siri-java-model.version>
-        <jaxb-runtime.version>3.0.2</jaxb-runtime.version>
+        <logback.version>1.5.3</logback.version>
+        <lucene.version>9.9.1</lucene.version>
+        <slf4j.version>2.0.12</slf4j.version>
+        <netex-java-model.version>2.0.15</netex-java-model.version>
+        <siri-java-model.version>1.26</siri-java-model.version>
+        <jaxb-runtime.version>4.0.5</jaxb-runtime.version>
         <!-- Other properties -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <GITHUB_REPOSITORY>opentripplanner/OpenTripPlanner</GITHUB_REPOSITORY>
@@ -79,7 +78,7 @@
              When running `mvn jacoco:prepare-agent test` argLine is replaced with the one activating the agent.
         -->
         <argLine/>
-        <plugin.prettier.version>0.19</plugin.prettier.version>
+        <plugin.prettier.version>0.22</plugin.prettier.version>
         <plugin.prettier.goal>write</plugin.prettier.goal>
 
     </properties>
@@ -143,10 +142,10 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
+                <version>3.12.1</version>
                 <configuration>
                     <!-- Target Java version -->
-                    <release>17</release>
+                    <release>21</release>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>com.google.dagger</groupId>
@@ -184,26 +183,9 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>com.webcohesion.enunciate</groupId>
-                <artifactId>enunciate-maven-plugin</artifactId>
-                <version>2.15.1</version>
-                <executions>
-                    <execution>
-                        <!-- override default binding to process-sources phase (enunciate generates web services). -->
-                        <phase>site</phase>
-                        <goals>
-                            <goal>docs</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <docsDir>${project.build.directory}/site/enunciate</docsDir>
-                </configuration>
-            </plugin>
-            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.2.1</version>
+                <version>3.3.0</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -227,7 +209,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.3.0</version>
+                <version>3.5.0</version>
                 <executions>
                     <execution>
                         <id>build-helper-generate-sources</id>
@@ -257,17 +239,17 @@
                     </execution>
                 </executions>
             </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-site-plugin</artifactId>
-                <version>3.12.1</version>
-            </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.0.0</version>
+                <version>3.2.5</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>me.fabriciorby</groupId>
+                        <artifactId>maven-surefire-junit5-tree-reporter</artifactId>
+                        <version>1.2.1</version>
+                    </dependency>
+                </dependencies>
                 <configuration>
                     <!-- we have to fork the JVM during tests so that the argLine is passed along -->
                     <forkCount>3</forkCount>
@@ -300,7 +282,6 @@
                         --add-opens java.base/jdk.internal.loader=ALL-UNNAMED
                         --add-opens java.base/jdk.internal.ref=ALL-UNNAMED
                         --add-opens java.base/jdk.internal.util=ALL-UNNAMED
-                        --add-opens java.base/jdk.internal.util.jar=ALL-UNNAMED
                         --add-opens java.base/jdk.internal.module=ALL-UNNAMED
                         --add-opens java.base/sun.net.www.protocol.http=ALL-UNNAMED
                         --add-opens java.base/sun.net.www.protocol.jar=ALL-UNNAMED
@@ -311,13 +292,27 @@
                     </argLine>
                     <!-- Jenkins needs XML test reports to determine whether the build is stable. -->
                     <disableXmlReport>true</disableXmlReport>
+                    <reportFormat>plain</reportFormat>
+                    <consoleOutputReporter>
+                        <disable>true</disable>
+                    </consoleOutputReporter>
+                    <statelessTestsetInfoReporter implementation="org.apache.maven.plugin.surefire.extensions.junit5.JUnit5StatelessTestsetInfoTreeReporter">
+                        <printStacktraceOnError>true</printStacktraceOnError>
+                        <printStacktraceOnFailure>true</printStacktraceOnFailure>
+                        <printStdoutOnError>true</printStdoutOnError>
+                        <printStdoutOnFailure>true</printStdoutOnFailure>
+                        <printStdoutOnSuccess>false</printStdoutOnSuccess>
+                        <printStderrOnError>true</printStderrOnError>
+                        <printStderrOnFailure>true</printStderrOnFailure>
+                        <printStderrOnSuccess>false</printStderrOnSuccess>
+                    </statelessTestsetInfoReporter>
                 </configuration>
             </plugin>
             <!-- code coverage report -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.9</version>
+                <version>0.8.11</version>
             </plugin>
             <plugin>
                 <!-- Get current Git commit information for use in MavenVersion class.
@@ -326,7 +321,7 @@
                   but we need the Maven project version as well, so we perform substitution. -->
                 <groupId>io.github.git-commit-id</groupId>
                 <artifactId>git-commit-id-maven-plugin</artifactId>
-                <version>5.0.0</version>
+                <version>8.0.1</version>
                 <executions>
                     <execution>
                         <goals>
@@ -368,7 +363,7 @@
                   properly if some input files are missing a terminating newline) -->
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.4.1</version>
+                <version>3.5.2</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -391,6 +386,7 @@
                               for deployment in the way source and docs are. -->
                             <shadedArtifactAttached>true</shadedArtifactAttached>
                             <shadedClassifierName>shaded</shadedClassifierName>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
                             <!-- MinimizeJar removes unused classes, (classes not imported explicitly by name).
                               We have eliminated most Jersey auto-scanning, but there is still some need for include
                               filters to force-include classes that are dynamically loaded by name/auto-scanned. -->
@@ -448,7 +444,7 @@
             <plugin>
                 <groupId>com.google.cloud.tools</groupId>
                 <artifactId>jib-maven-plugin</artifactId>
-                <version>3.3.1</version>
+                <version>3.4.1</version>
                 <configuration>
                     <container>
                         <mainClass>org.opentripplanner.standalone.OTPMain</mainClass>
@@ -464,6 +460,7 @@
                         </ports>
                     </container>
                     <from>
+                        <image>eclipse-temurin:21-jre</image>
                         <platforms>
                             <platform>
                                 <architecture>amd64</architecture>
@@ -514,7 +511,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <protocArtifact>com.google.protobuf:protoc:3.19.2:exe:${os.detected.classifier}</protocArtifact>
+                    <protocArtifact>com.google.protobuf:protoc:3.22.0:exe:${os.detected.classifier}</protocArtifact>
                 </configuration>
             </plugin>
         </plugins>
@@ -544,41 +541,15 @@
 
     <dependencyManagement>
         <dependencies>
-
-
-            <!-- Jakarta EE-->
-            <dependency>
-                <groupId>jakarta.annotation</groupId>
-                <artifactId>jakarta.annotation-api</artifactId>
-            </dependency>
-            <dependency>
-                <groupId>jakarta.ws.rs</groupId>
-                <artifactId>jakarta.ws.rs-api</artifactId>
-            </dependency>
-            <dependency>
-                <groupId>jakarta.validation</groupId>
-                <artifactId>jakarta.validation-api</artifactId>
-            </dependency>
-            <!--
-                The jaxb-api provides annotations like XmlElement indicating how classes should be (de)serialized.
-                The jaxb-runtime pulls in the jaxb-api of the same version transitively. But we specify both api and
-                runtime dependencies anyway here at the top level to prevent transitive dependencies from pulling in
-                mismatched versions. This is overriding an older version of jaxb-api pulled in by the netex-java-model.
-            -->
-            <dependency>
-                <groupId>jakarta.xml.bind</groupId>
-                <artifactId>jakarta.xml.bind-api</artifactId>
-                <version>3.0.1</version>
-            </dependency>
-
             <dependency>
                 <!-- This make sure all google libraries are using compatible versions. -->
                 <groupId>com.google.cloud</groupId>
                 <artifactId>libraries-bom</artifactId>
-                <version>26.11.0</version>
+                <version>26.34.0</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
         </dependencies>
     </dependencyManagement>
 
@@ -605,8 +576,7 @@
         <dependency>
             <groupId>net.logstash.logback</groupId>
             <artifactId>logstash-logback-encoder</artifactId>
-            <version>7.3</version>
-            <scope>runtime</scope>
+            <version>7.4</version>
         </dependency>
 
         <!-- dependency injection -->
@@ -645,12 +615,7 @@
         </dependency>
         <dependency>
             <groupId>org.geotools</groupId>
-            <artifactId>gt-opengis</artifactId>
-            <version>${geotools.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.geotools</groupId>
-            <artifactId>gt-wfs-ng</artifactId>
+            <artifactId>gt-api</artifactId>
             <version>${geotools.version}</version>
         </dependency>
         <dependency>
@@ -717,13 +682,13 @@
         <dependency>
             <groupId>org.entur</groupId>
             <artifactId>siri-protobuf-mapper</artifactId>
-            <version>0.10</version>
+            <version>1.0.3</version>
         </dependency>
 
         <dependency>
             <groupId>org.entur.gbfs</groupId>
             <artifactId>gbfs-java-model</artifactId>
-            <version>3.0.0</version>
+            <version>3.0.24</version>
         </dependency>
 
         <!-- TESTING -->
@@ -742,13 +707,13 @@
         <dependency>
             <groupId>com.tngtech.archunit</groupId>
             <artifactId>archunit</artifactId>
-            <version>1.0.1</version>
+            <version>1.2.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>5.3.1</version>
+            <version>5.11.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -762,7 +727,7 @@
         <dependency>
             <groupId>com.conveyal</groupId>
             <artifactId>kryo-tools</artifactId>
-            <version>1.5.0</version>
+            <version>1.6.0</version>
         </dependency>
         <!-- kryo serializers for Guava types !-->
         <dependency>
@@ -774,7 +739,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>31.1-jre</version>
+            <version>33.0.0-jre</version>
         </dependency>
         <!-- Jersey annotation-driven REST web services (JAX-RS implementation) -->
         <dependency>
@@ -862,18 +827,17 @@
             <artifactId>protobuf-java</artifactId>
         </dependency>
 
-        <!-- Asynchronous Websocket-capable client, for message-driven incremental GTFS-RT -->
-        <!-- AsyncHttpClient Websockets need a newer version of Grizzly than Jersey does. -->
-        <dependency>
-            <groupId>org.asynchttpclient</groupId>
-            <artifactId>async-http-client</artifactId>
-            <version>2.12.3</version>
-        </dependency>
         <!-- OBA GTFS loader -->
         <dependency>
             <groupId>org.onebusaway</groupId>
             <artifactId>onebusaway-gtfs</artifactId>
-            <version>1.3.119</version>
+            <version>1.4.15</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-simple</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <!-- Processing is used for the debug GUI (though we could probably use just Java2D) -->
         <dependency>
@@ -902,17 +866,17 @@
         <dependency>
             <groupId>com.graphql-java</groupId>
             <artifactId>graphql-java</artifactId>
-            <version>20.2</version>
+            <version>21.3</version>
         </dependency>
         <dependency>
             <groupId>com.graphql-java</groupId>
             <artifactId>graphql-java-extended-scalars</artifactId>
-            <version>20.2</version>
+            <version>21.0</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-            <version>4.5.14</version>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+            <version>5.3.1</version>
         </dependency>
         <dependency>
             <groupId>commons-cli</groupId>
@@ -933,7 +897,7 @@
         <dependency>
             <groupId>io.github.ci-cmg</groupId>
             <artifactId>mapbox-vector-tile</artifactId>
-            <version>4.0.5</version>
+            <version>4.0.6</version>
         </dependency>
         <dependency>
             <groupId>net.objecthunter</groupId>
@@ -943,34 +907,30 @@
         <dependency>
             <groupId>com.azure</groupId>
             <artifactId>azure-core</artifactId>
-            <version>1.36.0</version>
+            <version>1.46.0</version>
         </dependency>
         <dependency>
             <groupId>com.azure</groupId>
             <artifactId>azure-messaging-servicebus</artifactId>
-            <version>7.13.2</version>
+            <version>7.15.0</version>
         </dependency>
         <dependency>
-            <groupId>com.microsoft.azure</groupId>
-            <artifactId>azure-servicebus</artifactId>
-            <version>3.6.7</version>
-        </dependency>
-        <dependency>
-            <groupId>com.azure.resourcemanager</groupId>
-            <artifactId>azure-resourcemanager-servicebus</artifactId>
-            <version>2.24.0</version>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-identity</artifactId>
+            <version>1.11.2</version>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>ch.poole</groupId>
             <artifactId>OpeningHoursParser</artifactId>
-            <version>0.27.0</version>
+            <version>0.28.2</version>
         </dependency>
 
         <!-- create zip test files-->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
-            <version>1.23.0</version>
+            <version>1.26.1</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -985,6 +945,17 @@
         </profile>
         <profile>
             <id>prettierSkip</id>
+            <activation>
+                <property>
+                    <!--
+                      This works as a short alias to enable this from the command line. To skip
+                      prettier, set the 'ps' system property with the '-D ps' parameter:
+                      # mvn test -D ps
+                    -->
+                    <name>ps</name>
+                    <value/>
+                </property>
+            </activation>
             <build>
                 <plugins>
                     <plugin>
@@ -1036,7 +1007,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
-                        <version>3.0.1</version>
+                        <version>3.1.0</version>
                         <executions>
                             <execution>
                                 <id>sign-artifacts</id>

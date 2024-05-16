@@ -1,8 +1,10 @@
 package org.opentripplanner.ext.fares.model;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import org.opentripplanner.model.fare.FareProduct;
 import org.opentripplanner.model.plan.Leg;
 import org.opentripplanner.model.plan.ScheduledTransitLeg;
 
@@ -12,8 +14,8 @@ public record LegProducts(
   Set<ProductWithTransfer> products
 ) {
   public record ProductWithTransfer(FareLegRule legRule, List<FareTransferRule> transferRules) {
-    public FareProduct product() {
-      return legRule.fareProduct();
+    public Collection<FareProduct> products() {
+      return legRule.fareProducts();
     }
   }
 }

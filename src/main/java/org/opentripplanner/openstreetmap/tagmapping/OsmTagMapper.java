@@ -22,6 +22,14 @@ public interface OsmTagMapper {
     );
   }
 
+  default float getCarSpeedForWay(OSMWithTags way, boolean backward) {
+    return way.getOsmProvider().getWayPropertySet().getCarSpeedForWay(way, backward);
+  }
+
+  default Float getMaxUsedCarSpeed(WayPropertySet wayPropertySet) {
+    return wayPropertySet.maxUsedCarSpeed;
+  }
+
   default boolean isGeneralNoThroughTraffic(OSMWithTags way) {
     String access = way.getTag("access");
     return doesTagValueDisallowThroughTraffic(access);

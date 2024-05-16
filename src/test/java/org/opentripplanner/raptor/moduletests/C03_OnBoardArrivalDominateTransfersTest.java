@@ -22,6 +22,7 @@ import org.opentripplanner.raptor._data.transit.TestTransitData;
 import org.opentripplanner.raptor._data.transit.TestTripSchedule;
 import org.opentripplanner.raptor.api.request.RaptorRequestBuilder;
 import org.opentripplanner.raptor.configure.RaptorConfig;
+import org.opentripplanner.raptor.moduletests.support.ModuleTestDebugLogging;
 import org.opentripplanner.raptor.moduletests.support.RaptorModuleTestCase;
 
 /**
@@ -67,7 +68,7 @@ public class C03_OnBoardArrivalDominateTransfersTest implements RaptorTestConsta
       "BUS R1 0:05 0:08 ~ B ~ " +
       "BUS R2 0:12 0:15 ~ C ~ " +
       "Walk 1m " +
-      "[0:04 0:16 12m 1tx $2040]";
+      "[0:04 0:16 12m Tₓ1 C₁2_040]";
 
     return RaptorModuleTestCase
       .of()
@@ -80,8 +81,8 @@ public class C03_OnBoardArrivalDominateTransfersTest implements RaptorTestConsta
       // stops (at least egress stops) or we can compute paths during the search. The last
       // solution is probably the one which give the best performance, but the first will make
       // mc-raptor perform better (tighter heuristics).
-      .add(TC_MIN_DURATION, "[0:00 0:09 9m 0tx]")
-      .add(TC_MIN_DURATION_REV, "[0:21 0:30 9m 1tx]")
+      .add(TC_MIN_DURATION, "[0:00 0:09 9m Tₓ0]")
+      .add(TC_MIN_DURATION_REV, "[0:21 0:30 9m Tₓ1]")
       .add(standard(), PathUtils.withoutCost(path))
       .add(multiCriteria(), path)
       .build();

@@ -5,9 +5,10 @@ import java.time.ZoneId;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.IntSupplier;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.Point;
 import org.opentripplanner.framework.geometry.GeometryUtils;
 import org.opentripplanner.framework.i18n.I18NString;
 import org.opentripplanner.transit.model.basic.SubMode;
@@ -39,7 +40,7 @@ public final class RegularStop
 
   RegularStop(RegularStopBuilder builder) {
     super(builder);
-    this.index = INDEX_COUNTER.getAndIncrement();
+    this.index = builder.createIndex();
     this.platformCode = builder.platformCode();
     this.url = builder.url();
     this.timeZone = builder.timeZone();
@@ -52,8 +53,8 @@ public final class RegularStop
     }
   }
 
-  public static RegularStopBuilder of(FeedScopedId id) {
-    return new RegularStopBuilder(id);
+  public static RegularStopBuilder of(FeedScopedId id, IntSupplier indexCounter) {
+    return new RegularStopBuilder(id, indexCounter);
   }
 
   @Override
@@ -78,6 +79,12 @@ public final class RegularStop
   @Nullable
   public I18NString getUrl() {
     return url;
+  }
+
+  @Nonnull
+  @Override
+  public StopType getStopType() {
+    return StopType.REGULAR;
   }
 
   @Override
@@ -108,7 +115,7 @@ public final class RegularStop
 
   @Override
   @Nonnull
-  public Geometry getGeometry() {
+  public Point getGeometry() {
     return GeometryUtils.getGeometryFactory().createPoint(getCoordinate().asJtsCoordinate());
   }
 

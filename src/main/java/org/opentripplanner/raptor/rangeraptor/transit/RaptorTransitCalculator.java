@@ -1,10 +1,11 @@
 package org.opentripplanner.raptor.rangeraptor.transit;
 
 import static org.opentripplanner.framework.time.TimeUtils.hm2time;
-import static org.opentripplanner.raptor.api.RaptorConstants.TIME_NOT_SET;
+import static org.opentripplanner.raptor.api.model.RaptorConstants.TIME_NOT_SET;
 
 import java.util.Iterator;
 import org.opentripplanner.raptor.api.model.RaptorAccessEgress;
+import org.opentripplanner.raptor.api.model.RaptorConstants;
 import org.opentripplanner.raptor.api.model.RaptorTransfer;
 import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
 import org.opentripplanner.raptor.spi.IntIterator;
@@ -79,7 +80,7 @@ public interface RaptorTransitCalculator<T extends RaptorTripSchedule>
    * search it will be the earliest possible departure time, while for reverse search it uses the
    * latest arrival time.
    * <p>
-   * Returns {@link org.opentripplanner.raptor.api.RaptorConstants#TIME_NOT_SET} if transfer
+   * Returns {@link RaptorConstants#TIME_NOT_SET} if transfer
    * is not possible after the requested departure time
    */
   int departureTime(RaptorAccessEgress accessPath, int departureTime);
@@ -146,4 +147,16 @@ public interface RaptorTransitCalculator<T extends RaptorTripSchedule>
     RaptorTransitDataProvider<T> transitDataProvider,
     int fromStop
   );
+
+  /**
+   * This method removes the time-penalty from the given time if the provided accessEgress has
+   * a time-penalty, if not the given time is returned without any change.
+   * <p>
+   * You may use this method to enforce time constraints like the arriveBy time passed into Raptor.
+   * This should not be applied to the time Raptor uses for the comparison, like in the ParetoSet.
+   * The arrival-times used in a pareto-set must include the time-penalty.
+   */
+  default int timeMinusPenalty(int time, RaptorAccessEgress accessEgress) {
+    return accessEgress.hasTimePenalty() ? minusDuration(time, accessEgress.timePenalty()) : time;
+  }
 }

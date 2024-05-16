@@ -1,10 +1,33 @@
 {
   "routingDefaults": {
-    "bikeTriangleSafetyFactor": 0.4,
-    "bikeTriangleSlopeFactor": 0.3,
-    "bikeTriangleTimeFactor": 0.3,
-    "bikeRentalPickupTime": 180,
-    "bikeRentalPickupCost": 850,
+    "bicycle": {
+      "triangle": {
+        "time": 0.3,
+        "flatness": 0.3,
+        "safety": 0.4
+      },
+      "rental": {
+        "pickupTime": "3m",
+        "pickupCost": 850
+      }
+    },
+    "car": {
+      "rental": {
+        "pickupTime": "3m",
+        "pickupCost": 850
+      }
+    },
+    "scooter": {
+      "triangle": {
+        "time": 0.3,
+        "flatness": 0.3,
+        "safety": 0.4
+      },
+      "rental": {
+        "pickupTime": "3m",
+        "pickupCost": 850
+      }
+    },
     "itineraryFilters": {
       // only show non-transit (ie. walking) when it's at least as good as the transit option
       "nonTransitGeneralizedCostLimit": "0 + 1.0 x",

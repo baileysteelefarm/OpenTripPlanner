@@ -1,5 +1,6 @@
 package org.opentripplanner.framework.lang;
 
+import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 
 /**
@@ -7,11 +8,37 @@ import javax.annotation.Nonnull;
  */
 public class StringUtils {
 
+  /**
+   * Regex to find unprintable characters like newlines and 'ZERO WIDTH SPACE' (U+200B).
+   * <p>
+   * \p{C} was chosen over \p{Cntrl} because it also recognises invisible control characters in the
+   * middle of a word.
+   */
+  private static final String INVISIBLE_CHARS_REGEX = "\\p{C}";
+  /**
+   * Patterns are immutable and thread safe.
+   */
+  private static final Pattern INVISIBLE_CHARS_PATTERN = Pattern.compile(INVISIBLE_CHARS_REGEX);
+
   private StringUtils() {}
 
   /** true if the given text is not {@code null} or has at least one none white-space character. */
   public static boolean hasValue(String text) {
     return text != null && !text.isBlank();
+  }
+
+  /** true if the given text is {@code null} or only have white-space characters. */
+  public static boolean hasNoValue(String text) {
+    return text == null || text.isBlank();
+  }
+
+  /**
+   * true if the given text is {@code null}, empty, only white-space or the string {@code "null"}.
+   * This is convenient when parsing untrusted external client requests, and we do not care to
+   * differentiate.
+   * */
+  public static boolean hasNoValueOrNullAsString(String text) {
+    return hasNoValue(text) || "null".equals(text);
   }
 
   /**
@@ -95,5 +122,24 @@ public class StringUtils {
   /** Replace single quotes with double quotes.  */
   public static String quoteReplace(@Nonnull String text) {
     return text.replace('\'', '\"');
+  }
+
+  /**
+   * Convert "HELLO_WORLD" or "HellO_WorlD" to "hello-world".
+   * <p>
+   * https://developer.mozilla.org/en-US/docs/Glossary/Kebab_case
+   */
+  public static String kebabCase(String input) {
+    return input.toLowerCase().replace('_', '-');
+  }
+
+  /**
+   * Detects unprintable control characters like newlines, tabs and invisible whitespace
+   * like 'ZERO WIDTH SPACE' (U+200B) that don't have an immediate visual representation.
+   * <p>
+   * Note that "regular" whitespace characters like U+0020 and U+2000 are considered visible.
+   */
+  public static boolean containsInvisibleCharacters(String input) {
+    return INVISIBLE_CHARS_PATTERN.matcher(input).find();
   }
 }

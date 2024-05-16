@@ -69,6 +69,8 @@ public final class ForwardPathMapper<T extends RaptorTripSchedule> implements Pa
       arrival = arrival.previous();
     }
 
+    pathBuilder.c2(destinationArrival.c2());
+
     return pathBuilder.build();
   }
 

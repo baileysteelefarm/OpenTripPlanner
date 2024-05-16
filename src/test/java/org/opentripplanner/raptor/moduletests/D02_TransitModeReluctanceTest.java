@@ -19,6 +19,7 @@ import org.opentripplanner.raptor._data.transit.TestTripSchedule;
 import org.opentripplanner.raptor.api.request.RaptorProfile;
 import org.opentripplanner.raptor.api.request.RaptorRequestBuilder;
 import org.opentripplanner.raptor.configure.RaptorConfig;
+import org.opentripplanner.raptor.moduletests.support.ModuleTestDebugLogging;
 import org.opentripplanner.raptor.moduletests.support.RaptorModuleTestConfig;
 
 /**
@@ -72,12 +73,12 @@ public class D02_TransitModeReluctanceTest implements RaptorTestConstants {
           Arguments.of(
             PREFER_R1,
             config,
-            "Walk 30s ~ A ~ BUS R1 0:01 0:02:40 ~ B ~ Walk 20s " + "[0:00:30 0:03 2m30s 0tx $799]"
+            "Walk 30s ~ A ~ BUS R1 0:01 0:02:40 ~ B ~ Walk 20s " + "[0:00:30 0:03 2m30s Tₓ0 C₁799]"
           ),
           Arguments.of(
             PREFER_R2,
             config,
-            "Walk 30s ~ A ~ BUS R2 0:01 0:02:40 ~ B ~ Walk 20s " + "[0:00:30 0:03 2m30s 0tx $789]"
+            "Walk 30s ~ A ~ BUS R2 0:01 0:02:40 ~ B ~ Walk 20s " + "[0:00:30 0:03 2m30s Tₓ0 C₁789]"
           )
         )
       );

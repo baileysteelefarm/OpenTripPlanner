@@ -11,6 +11,7 @@ import static org.opentripplanner.standalone.config.framework.json.ConfigType.BO
 import static org.opentripplanner.standalone.config.framework.json.JsonSupport.newNodeAdapterForTest;
 import static org.opentripplanner.standalone.config.framework.json.OtpVersion.V2_0;
 import static org.opentripplanner.standalone.config.framework.json.OtpVersion.V2_1;
+import static org.opentripplanner.standalone.config.framework.json.OtpVersion.V2_4;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -161,7 +162,7 @@ public class NodeAdapterTest {
     assertEquals(AnEnum.A, subject.of("a").asEnum(AnEnum.B), "Get existing property");
     assertEquals(AnEnum.A_B_C, subject.of("abc").asEnum(AnEnum.A_B_C), "Get existing property");
     assertEquals(AnEnum.B, subject.of("missing-key").asEnum(AnEnum.B), "Get default value");
-    // Then requiered
+    // Then required
     assertEquals(AnEnum.A, subject.of("a").asEnum(AnEnum.class), "Get existing property");
     assertEquals(AnEnum.A_B_C, subject.of("abc").asEnum(AnEnum.A_B_C), "Get existing property");
     assertThrows(OtpAppException.class, () -> subject.of("missing-key").asEnum(AnEnum.class));
@@ -170,18 +171,35 @@ public class NodeAdapterTest {
   @Test
   public void asEnumWithIllegalPropertySet() {
     // Given
-    NodeAdapter subject = newNodeAdapterForTest("{ key : 'NONE_EXISTING_ENUM_VALUE' }");
+    NodeAdapter subject = newNodeAdapterForTest(
+      """
+      {
+        key : 'NONE_EXISTING_ENUM_VALUE',
+        skim : {
+          albin : 'NONE_EXISTING_ENUM_VALUE'
+        }
+      }
+    """
+    );
+
+    NodeAdapter child = subject.of("skim").asObject();
 
     // Then expect an error when value 'NONE_EXISTING_ENUM_VALUE' is not in the set of legal
     // values: ['A', 'B', 'C']
     assertEquals(AnEnum.B, subject.of("key").asEnum(AnEnum.B));
+    assertEquals(AnEnum.A, child.of("albin").asEnum(AnEnum.A));
 
     // Verify logging
     final StringBuilder log = new StringBuilder();
-    subject.logAllWarnings(log::append);
+    subject.logAllWarnings(m -> log.append(m).append('\n'));
     assertEquals(
-      "The enum value 'NONE_EXISTING_ENUM_VALUE' is not legal. " +
-      "Expected one of [A, B, A_B_C]. Parameter: key. Source: Test.",
+      """
+        {error-message} Parameter: skim.albin. Source: Test.
+        {error-message} Parameter: key. Source: Test.
+        """.replace(
+          "{error-message}",
+          "The enum value 'NONE_EXISTING_ENUM_VALUE' is not legal. Expected one of [A, B, A_B_C]."
+        ),
       log.toString()
     );
   }
@@ -198,6 +216,29 @@ public class NodeAdapterTest {
       Collections.<AnEnum, Boolean>emptyMap(),
       subject.of("missing-key").asEnumMap(AnEnum.class, Boolean.class)
     );
+    assertEquals(NON_UNUSED_PARAMETERS, unusedParams(subject));
+  }
+
+  @Test
+  public void asEnumMapWithCustomType() {
+    // With optional enum values in map
+    NodeAdapter subject = newNodeAdapterForTest("{ key : { A: {a:'Foo'} } }");
+    assertEquals(
+      Map.of(AnEnum.A, new ARecord("Foo")),
+      subject.of("key").asEnumMap(AnEnum.class, ARecord::fromJson, Map.of())
+    );
+    assertEquals(
+      Collections.<AnEnum, Boolean>emptyMap(),
+      subject.of("missing-key").asEnumMap(AnEnum.class, ARecord::fromJson, Map.of())
+    );
+    assertEquals(NON_UNUSED_PARAMETERS, unusedParams(subject));
+  }
+
+  @Test
+  public void asEnumMapWithDefaultValue() {
+    var subject = newNodeAdapterForTest("{}");
+    final Map<AnEnum, ARecord> dflt = Map.of(AnEnum.A, new ARecord("Foo"));
+    assertEquals(dflt, subject.of("key").asEnumMap(AnEnum.class, ARecord::fromJson, dflt));
     assertEquals(NON_UNUSED_PARAMETERS, unusedParams(subject));
   }
 
@@ -438,10 +479,7 @@ public class NodeAdapterTest {
       .of("key")
       .since(V2_0)
       .summary("Summary Array")
-      .asObjects(
-        List.of(),
-        n -> new ARecord(n.of("a").since(V2_1).summary("Summary Element").asString())
-      );
+      .asObjects(List.of(), ARecord::fromJson);
 
     assertEquals("[ARecord[a=I], ARecord[a=2]]", result.toString());
     assertEquals("[key : object[] = [] Since 2.0]", subject.parametersSorted().toString());
@@ -449,10 +487,17 @@ public class NodeAdapterTest {
   }
 
   @Test
-  public void linearFunction() {
+  public void asCostLinearFunction() {
     NodeAdapter subject = newNodeAdapterForTest("{ key : '400+8x' }");
-    assertEquals("f(x) = 400 + 8.0 x", subject.of("key").asLinearFunction(null).toString());
-    assertNull(subject.of("no-key").asLinearFunction(null));
+    assertEquals("6m40s + 8.0 t", subject.of("key").asCostLinearFunction(null).toString());
+    assertNull(subject.of("no-key").asCostLinearFunction(null));
+  }
+
+  @Test
+  public void asTimePenalty() {
+    NodeAdapter subject = newNodeAdapterForTest("{ key : '400+8x' }");
+    assertEquals("6m40s + 8.0 t", subject.of("key").asTimePenalty(null).toString());
+    assertNull(subject.of("no-key").asTimePenalty(null));
   }
 
   @Test
@@ -524,5 +569,9 @@ public class NodeAdapterTest {
     A_B_C,
   }
 
-  private record ARecord(String a) {}
+  private record ARecord(String a) {
+    static ARecord fromJson(NodeAdapter c) {
+      return new ARecord(c.of("a").since(V2_4).summary("Summary A").asString());
+    }
+  }
 }

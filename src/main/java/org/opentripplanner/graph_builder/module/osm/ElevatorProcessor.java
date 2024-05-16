@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
+import javax.annotation.Nonnull;
 import org.opentripplanner.framework.i18n.NonLocalizedString;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.graph_builder.issue.api.Issue;
@@ -25,6 +26,7 @@ import org.opentripplanner.street.model.vertex.ElevatorOnboardVertex;
 import org.opentripplanner.street.model.vertex.IntersectionVertex;
 import org.opentripplanner.street.model.vertex.OsmVertex;
 import org.opentripplanner.street.model.vertex.Vertex;
+import org.opentripplanner.street.model.vertex.VertexFactory;
 import org.opentripplanner.transit.model.basic.Accessibility;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +34,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Contains the logic for extracting elevator data from OSM and converting it to edges.
  * <p>
- * I depends heavily on the idiosyncratic processing of the OSM data in {@link OpenStreetMapModule}
+ * It depends heavily on the idiosyncratic processing of the OSM data in {@link OsmModule}
  * which is the reason this is not a public class.
  */
 class ElevatorProcessor {
@@ -40,26 +42,22 @@ class ElevatorProcessor {
   private static final Logger LOG = LoggerFactory.getLogger(ElevatorProcessor.class);
 
   private final DataImportIssueStore issueStore;
-  private final Map<Long, Map<OSMLevel, OsmVertex>> multiLevelNodes;
-  private final OSMDatabase osmdb;
-
-  private final Map<Long, IntersectionVertex> intersectionNodes;
+  private final OsmDatabase osmdb;
+  private final VertexGenerator vertexGenerator;
 
   public ElevatorProcessor(
-    DataImportIssueStore issueStore,
-    OSMDatabase osmdb,
-    Map<Long, Map<OSMLevel, OsmVertex>> multiLevelNodes,
-    Map<Long, IntersectionVertex> intersectionNodes
+    @Nonnull DataImportIssueStore issueStore,
+    @Nonnull OsmDatabase osmdb,
+    @Nonnull VertexGenerator vertexGenerator
   ) {
     this.issueStore = issueStore;
     this.osmdb = osmdb;
-    this.multiLevelNodes = multiLevelNodes;
-    this.intersectionNodes = intersectionNodes;
+    this.vertexGenerator = vertexGenerator;
   }
 
   public void buildElevatorEdges(Graph graph) {
     /* build elevator edges */
-    for (Long nodeId : multiLevelNodes.keySet()) {
+    for (Long nodeId : vertexGenerator.multiLevelNodes().keySet()) {
       OSMNode node = osmdb.getNode(nodeId);
       // this allows skipping levels, e.g., an elevator that stops
       // at floor 0, 2, 3, and 5.
@@ -67,7 +65,7 @@ class ElevatorProcessor {
       // subscript it so we can loop over it in twos. Assumedly, it will stay
       // sorted when we convert it to an Array.
       // The objects are Integers, but toArray returns Object[]
-      Map<OSMLevel, OsmVertex> vertices = multiLevelNodes.get(nodeId);
+      Map<OSMLevel, OsmVertex> vertices = vertexGenerator.multiLevelNodes().get(nodeId);
 
       /*
        * first, build FreeEdges to disconnect from the graph, GenericVertices to serve as attachment points, and ElevatorBoard and
@@ -86,10 +84,15 @@ class ElevatorProcessor {
       for (OSMLevel level : levels) {
         // get the node to build the elevator out from
         OsmVertex sourceVertex = vertices.get(level);
-        String sourceVertexLabel = sourceVertex.getLabel();
         String levelName = level.longName;
 
-        createElevatorVertices(graph, onboardVertices, sourceVertex, sourceVertexLabel, levelName);
+        createElevatorVertices(
+          graph,
+          onboardVertices,
+          sourceVertex,
+          sourceVertex.getLabelString(),
+          levelName
+        );
       }
       int travelTime = parseDuration(node).orElse(-1);
 
@@ -98,7 +101,7 @@ class ElevatorProcessor {
       createElevatorHopEdges(
         onboardVertices,
         wheelchair,
-        node.isTagTrue("bicycle"),
+        !node.isBicycleExplicitlyDenied(),
         levels.length,
         travelTime
       );
@@ -113,7 +116,8 @@ class ElevatorProcessor {
       List<Long> nodes = Arrays
         .stream(elevatorWay.getNodeRefs().toArray())
         .filter(nodeRef ->
-          intersectionNodes.containsKey(nodeRef) && intersectionNodes.get(nodeRef) != null
+          vertexGenerator.intersectionNodes().containsKey(nodeRef) &&
+          vertexGenerator.intersectionNodes().get(nodeRef) != null
         )
         .boxed()
         .toList();
@@ -121,8 +125,8 @@ class ElevatorProcessor {
       ArrayList<Vertex> onboardVertices = new ArrayList<>();
       for (int i = 0; i < nodes.size(); i++) {
         Long node = nodes.get(i);
-        var sourceVertex = intersectionNodes.get(node);
-        String sourceVertexLabel = sourceVertex.getLabel();
+        var sourceVertex = vertexGenerator.intersectionNodes().get(node);
+        String sourceVertexLabel = sourceVertex.getLabelString();
         String levelName = elevatorWay.getId() + " / " + i;
         createElevatorVertices(
           graph,
@@ -140,7 +144,7 @@ class ElevatorProcessor {
       createElevatorHopEdges(
         onboardVertices,
         wheelchair,
-        elevatorWay.isTagTrue("bicycle"),
+        !elevatorWay.isBicycleExplicitlyDenied(),
         levels,
         travelTime
       );
@@ -152,30 +156,27 @@ class ElevatorProcessor {
     Graph graph,
     ArrayList<Vertex> onboardVertices,
     IntersectionVertex sourceVertex,
-    String sourceVertexLabel,
+    String label,
     String levelName
   ) {
-    ElevatorOffboardVertex offboardVertex = new ElevatorOffboardVertex(
-      graph,
-      sourceVertexLabel + "_offboard",
-      sourceVertex.getX(),
-      sourceVertex.getY(),
-      new NonLocalizedString(levelName)
+    var factory = new VertexFactory(graph);
+    ElevatorOffboardVertex offboardVertex = factory.elevatorOffboard(
+      sourceVertex,
+      label,
+      levelName
     );
 
-    new FreeEdge(sourceVertex, offboardVertex);
-    new FreeEdge(offboardVertex, sourceVertex);
+    FreeEdge.createFreeEdge(sourceVertex, offboardVertex);
+    FreeEdge.createFreeEdge(offboardVertex, sourceVertex);
 
-    ElevatorOnboardVertex onboardVertex = new ElevatorOnboardVertex(
-      graph,
-      sourceVertexLabel + "_onboard",
-      sourceVertex.getX(),
-      sourceVertex.getY(),
+    ElevatorOnboardVertex onboardVertex = factory.elevatorOnboard(sourceVertex, label, levelName);
+
+    ElevatorBoardEdge.createElevatorBoardEdge(offboardVertex, onboardVertex);
+    ElevatorAlightEdge.createElevatorAlightEdge(
+      onboardVertex,
+      offboardVertex,
       new NonLocalizedString(levelName)
     );
-
-    new ElevatorBoardEdge(offboardVertex, onboardVertex);
-    new ElevatorAlightEdge(onboardVertex, offboardVertex, new NonLocalizedString(levelName));
 
     // accumulate onboard vertices to so they can be connected by hop edges later
     onboardVertices.add(onboardVertex);
@@ -207,12 +208,10 @@ class ElevatorProcessor {
   }
 
   private boolean isElevatorWay(OSMWay way) {
-    if (!way.hasTag("highway")) {
+    if (!way.isElevator()) {
       return false;
     }
-    if (!"elevator".equals(way.getTag("highway"))) {
-      return false;
-    }
+
     if (osmdb.isAreaWay(way.getId())) {
       return false;
     }

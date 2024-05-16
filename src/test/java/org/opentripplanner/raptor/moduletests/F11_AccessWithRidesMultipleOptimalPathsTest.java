@@ -23,6 +23,7 @@ import org.opentripplanner.raptor._data.transit.TestTransitData;
 import org.opentripplanner.raptor._data.transit.TestTripSchedule;
 import org.opentripplanner.raptor.api.request.RaptorRequestBuilder;
 import org.opentripplanner.raptor.configure.RaptorConfig;
+import org.opentripplanner.raptor.moduletests.support.ModuleTestDebugLogging;
 import org.opentripplanner.raptor.moduletests.support.RaptorModuleTestCase;
 import org.opentripplanner.raptor.spi.DefaultSlackProvider;
 
@@ -91,11 +92,11 @@ public class F11_AccessWithRidesMultipleOptimalPathsTest implements RaptorTestCo
     var endL2AndWalk = "~ BUS L2 0:15 0:20 ~ E ~ Walk 3m ";
 
     // Min-Duration 19m - this is
-    var flexTransferTransit = startFlexAccess + endWalkAndL3 + "[0:02 0:22 20m 1tx $2580]";
+    var flexTransferTransit = startFlexAccess + endWalkAndL3 + "[0:02 0:22 20m Tₓ1 C₁2_580]";
     // Best duration 18m,
-    var transitAndTransit = startWalkAndL1 + endL2AndWalk + "[0:02 0:23 21m 1tx]";
+    var transitAndTransit = startWalkAndL1 + endL2AndWalk + "[0:02 0:23 21m Tₓ1]";
     // Min-Duration 19m
-    var flexAndTransit = startFlexAccess + endL2AndWalk + "[0:03 0:23 20m 1tx $2640]";
+    var flexAndTransit = startFlexAccess + endL2AndWalk + "[0:03 0:23 20m Tₓ1 C₁2_640]";
 
     return RaptorModuleTestCase
       .of()
@@ -124,11 +125,11 @@ public class F11_AccessWithRidesMultipleOptimalPathsTest implements RaptorTestCo
     var endL2AndWalk = "~ BUS L2 0:15 0:20 ~ E ~ Walk 1m ";
 
     // Min-Duration 19m - this is
-    var flexTransferTransit = startFlexAccess + endWalkAndL3 + "[0:02 0:22 20m 1tx $2580]";
+    var flexTransferTransit = startFlexAccess + endWalkAndL3 + "[0:02 0:22 20m Tₓ1 C₁2_580]";
     // Best duration 16m,
-    var transitAndTransit = startWalkAndL1 + endL2AndWalk + "[0:02 0:21 19m 1tx]";
+    var transitAndTransit = startWalkAndL1 + endL2AndWalk + "[0:02 0:21 19m Tₓ1]";
     // Min-Duration 17m
-    var flexAndTransit = startFlexAccess + endL2AndWalk + "[0:03 0:21 18m 1tx $2400]";
+    var flexAndTransit = startFlexAccess + endL2AndWalk + "[0:03 0:21 18m Tₓ1 C₁2_400]";
 
     return RaptorModuleTestCase
       .of()

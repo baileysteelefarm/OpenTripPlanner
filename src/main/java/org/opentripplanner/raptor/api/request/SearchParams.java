@@ -6,8 +6,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import org.opentripplanner.framework.tostring.ToStringBuilder;
-import org.opentripplanner.raptor.api.RaptorConstants;
 import org.opentripplanner.raptor.api.model.RaptorAccessEgress;
+import org.opentripplanner.raptor.api.model.RaptorConstants;
 import org.opentripplanner.raptor.api.model.RaptorTransfer;
 
 /**
@@ -29,7 +29,7 @@ public class SearchParams {
   private final boolean allowEmptyAccessEgressPaths;
 
   /**
-   * Default values is defined in the default constructor.
+   * Default values are defined in the default constructor.
    */
   private SearchParams() {
     earliestDepartureTime = RaptorConstants.TIME_NOT_SET;
@@ -92,10 +92,10 @@ public class SearchParams {
   /**
    * The time window used to search. The unit is seconds.
    * <p>
-   * For a *depart by search*, this is added to the 'earliestDepartureTime' to find the
+   * For a *depart-by-search*, this is added to the 'earliestDepartureTime' to find the
    * 'latestDepartureTime'.
    * <p>
-   * For a *arrive by search* this is used to calculate the 'earliestArrivalTime'. The algorithm
+   * For an *arrive-by-search* this is used to calculate the 'earliestArrivalTime'. The algorithm
    * will find all optimal travels within the given time window.
    * <p>
    * Set the search window to 0 (zero) to run 1 iteration.
@@ -251,15 +251,20 @@ public class SearchParams {
 
   @Override
   public String toString() {
+    var dft = defaults();
     return ToStringBuilder
       .of(SearchParams.class)
-      .addServiceTime("earliestDepartureTime", earliestDepartureTime, RaptorConstants.TIME_NOT_SET)
-      .addServiceTime("latestArrivalTime", latestArrivalTime, RaptorConstants.TIME_NOT_SET)
-      .addDurationSec("searchWindow", searchWindowInSeconds)
+      .addServiceTime("earliestDepartureTime", earliestDepartureTime, dft.earliestDepartureTime)
+      .addServiceTime("latestArrivalTime", latestArrivalTime, dft.latestArrivalTime)
+      .addDurationSec("searchWindow", searchWindowInSeconds, dft.searchWindowInSeconds)
       .addBoolIfTrue("departAsLateAsPossible", preferLateArrival)
-      .addNum("numberOfAdditionalTransfers", numberOfAdditionalTransfers)
-      .addCollection("accessPaths", accessPaths, 5)
-      .addCollection("egressPaths", egressPaths, 5)
+      .addNum(
+        "numberOfAdditionalTransfers",
+        numberOfAdditionalTransfers,
+        dft.numberOfAdditionalTransfers
+      )
+      .addCollection("accessPaths", accessPaths, 5, RaptorAccessEgress::defaultToString)
+      .addCollection("egressPaths", egressPaths, 5, RaptorAccessEgress::defaultToString)
       .toString();
   }
 

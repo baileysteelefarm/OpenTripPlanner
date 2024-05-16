@@ -37,6 +37,20 @@ public class OsmTagMapperTest {
   }
 
   @Test
+  public void constantSpeedCarRouting() {
+    OsmTagMapper osmTagMapper = new ConstantSpeedFinlandMapper(20f);
+
+    var slowWay = new OSMWithTags();
+    slowWay.addTag("highway", "residential");
+    assertEquals(20f, osmTagMapper.getCarSpeedForWay(slowWay, true));
+
+    var fastWay = new OSMWithTags();
+    fastWay.addTag("highway", "motorway");
+    fastWay.addTag("maxspeed", "120 kmph");
+    assertEquals(20f, osmTagMapper.getCarSpeedForWay(fastWay, true));
+  }
+
+  @Test
   public void isBicycleNoThroughTrafficExplicitlyDisallowed() {
     OsmTagMapper osmTagMapper = new DefaultMapper();
     assertTrue(
@@ -68,15 +82,16 @@ public class OsmTagMapperTest {
 
     var withoutFoo = new OSMWithTags();
     withoutFoo.addTag("tag", "imaginary");
-    assertEquals(2, wps.getDataForWay(withoutFoo).getBicycleSafetyFeatures().back());
+    assertEquals(2, wps.getDataForWay(withoutFoo).bicycleSafety().back());
 
     // the mixin for foo=bar reduces the bike safety factor
     var withFoo = new OSMWithTags();
     withFoo.addTag("tag", "imaginary");
     withFoo.addTag("foo", "bar");
-    assertEquals(1, wps.getDataForWay(withFoo).getBicycleSafetyFeatures().back());
+    assertEquals(1, wps.getDataForWay(withFoo).bicycleSafety().back());
   }
 
+  @Test
   public void testAccessNo() {
     OSMWithTags tags = new OSMWithTags();
     OsmTagMapper osmTagMapper = new DefaultMapper();

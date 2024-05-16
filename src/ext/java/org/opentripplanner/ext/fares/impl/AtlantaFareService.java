@@ -1,6 +1,11 @@
 package org.opentripplanner.ext.fares.impl;
 
+import static org.opentripplanner.transit.model.basic.Money.ZERO_USD;
+import static org.opentripplanner.transit.model.basic.Money.usDollars;
+
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 import java.time.Duration;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -12,9 +17,12 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import org.opentripplanner.ext.fares.model.FareRuleSet;
+import org.opentripplanner.model.fare.FareProduct;
+import org.opentripplanner.model.fare.ItineraryFares;
 import org.opentripplanner.model.plan.Leg;
 import org.opentripplanner.routing.core.FareType;
-import org.opentripplanner.routing.core.ItineraryFares;
+import org.opentripplanner.transit.model.basic.Money;
+import org.opentripplanner.transit.model.framework.FeedScopedId;
 import org.opentripplanner.transit.model.network.Route;
 
 public class AtlantaFareService extends DefaultFareService {
@@ -25,6 +33,7 @@ public class AtlantaFareService extends DefaultFareService {
   public static final String MARTA_AGENCY_ID = "5";
   public static final String GCT_AGENCY_ID = "4";
   public static final Set<String> COBB_FREE_RIDE_SHORT_NAMES = Set.of("blue", "green");
+  private static final String FEED_ID = "atlanta";
 
   private enum TransferType {
     END_TRANSFER, // Ends this transfer entirely.
@@ -63,10 +72,10 @@ public class AtlantaFareService extends DefaultFareService {
   private static class ATLTransfer {
 
     List<Leg> legs = new ArrayList<>();
-    List<ItineraryFares> fares = new ArrayList<>();
+    Multimap<FareType, Money> fares = ArrayListMultimap.create();
     final FareType fareType;
     final Currency currency;
-    float lastFareWithTransfer;
+    Money lastFareWithTransfer;
     int maxRides;
     Duration transferWindow;
 
@@ -81,14 +90,12 @@ public class AtlantaFareService extends DefaultFareService {
      * @param defaultFare Default fare to use for transfer calculations (usually from GTFS)
      * @return Whether the added ride is valid or not. If invalid, then this transfer has ended and a new one is needed for the ride.
      */
-    public boolean addLeg(Leg leg, float defaultFare) {
+    public boolean addLeg(Leg leg, Money defaultFare) {
       // A transfer will always contain at least one ride.
-      ItineraryFares fare = new ItineraryFares();
       RideType toRideType = classify(leg);
       if (legs.size() == 0) {
         legs.add(leg);
-        fare.addFare(fareType, getMoney(currency, defaultFare));
-        fares.add(fare);
+        fares.put(fareType, defaultFare);
         lastFareWithTransfer = defaultFare;
         maxRides = getMaxTransfers(toRideType);
         transferWindow = getTransferWindow(toRideType);
@@ -122,12 +129,8 @@ public class AtlantaFareService extends DefaultFareService {
         }
       }
 
-      // The transfer is valid for this ride, so create a fare object.
-      // TODO: Change this fare object out for the one on the Ride object when Fare-by-leg is added
-      fares.add(fare);
-
       if (transferClassification.type.equals(TransferType.NO_TRANSFER)) {
-        fare.addFare(fareType, getMoney(currency, defaultFare));
+        fares.put(fareType, defaultFare);
         // Full fare is charged, but transfer is still valid.
         // Ride is not added to rides list since it doesn't count towards transfer limit.
         // NOTE: Rides and fares list will not always be in sync because of this.
@@ -137,31 +140,27 @@ public class AtlantaFareService extends DefaultFareService {
       // All conditions below this point "use" the transfer, so we add the ride.
       legs.add(leg);
       if (transferClassification.type.equals(TransferType.FREE_TRANSFER)) {
-        fare.addFare(fareType, getMoney(currency, 0));
+        fares.put(fareType, Money.ofFractionalAmount(currency, 0));
         lastFareWithTransfer = defaultFare;
         return true;
       } else if (transferClassification.type.equals(TransferType.TRANSFER_PAY_DIFFERENCE)) {
-        float newCost = 0;
-        if (defaultFare > lastFareWithTransfer) {
-          newCost = defaultFare - lastFareWithTransfer;
+        Money newCost = Money.ZERO_USD;
+        if (defaultFare.greaterThan(lastFareWithTransfer)) {
+          newCost = defaultFare.minus(lastFareWithTransfer);
         }
-        fare.addFare(fareType, getMoney(currency, newCost));
+        fares.put(fareType, newCost);
         lastFareWithTransfer = defaultFare;
         return true;
       } else if (transferClassification.type.equals(TransferType.TRANSFER_WITH_UPCHARGE)) {
-        fare.addFare(fareType, getMoney(currency, (float) transferClassification.upcharge / 100));
+        fares.put(fareType, transferClassification.upcharge);
         lastFareWithTransfer = defaultFare;
         return true;
       }
       return true;
     }
 
-    public float getTotal() {
-      int total = 0;
-      for (ItineraryFares f : fares) {
-        total += f.getFare(fareType).amount();
-      }
-      return (float) total / 100;
+    public Money getTotal() {
+      return fares.get(fareType).stream().reduce(ZERO_USD, Money::plus);
     }
   }
 
@@ -169,14 +168,14 @@ public class AtlantaFareService extends DefaultFareService {
    * Get the leg price for a single leg. If testing, this class is being called directly so the required agency cash
    * values are not available therefore the default test price is used instead.
    */
-  protected float getLegPrice(Leg leg, FareType fareType, Collection<FareRuleSet> fareRules) {
-    return calculateCost(fareType, Lists.newArrayList(leg), fareRules);
+  protected Money getLegPrice(Leg leg, FareType fareType, Collection<FareRuleSet> fareRules) {
+    return calculateCost(fareType, Lists.newArrayList(leg), fareRules).orElse(Money.ZERO_USD);
   }
 
   private static class TransferMeta {
 
     public final TransferType type;
-    public final int upcharge;
+    public final Money upcharge;
     public final boolean payOnExit;
 
     /**
@@ -185,14 +184,14 @@ public class AtlantaFareService extends DefaultFareService {
      * @param upcharge Upcharge for the transfer in cents
      * @param payOnExit Whether the fare is charged at end of leg
      */
-    public TransferMeta(TransferType type, int upcharge, boolean payOnExit) {
+    public TransferMeta(TransferType type, Money upcharge, boolean payOnExit) {
       this.type = type;
       this.upcharge = upcharge;
       this.payOnExit = payOnExit;
     }
 
     public TransferMeta(TransferType type) {
-      this(type, 0, false);
+      this(type, Money.ZERO_USD, false);
     }
   }
 
@@ -309,9 +308,21 @@ public class AtlantaFareService extends DefaultFareService {
             GCT_EXPRESS_Z1,
             GCT_EXPRESS_Z2,
             XPRESS_AFTERNOON,
-            XPRESS_MORNING -> new TransferMeta(TransferType.FREE_TRANSFER, 0, payOnExit);
-          case COBB_LOCAL -> new TransferMeta(TransferType.TRANSFER_WITH_UPCHARGE, 150, payOnExit);
-          case GCT_LOCAL -> new TransferMeta(TransferType.TRANSFER_WITH_UPCHARGE, 100, payOnExit);
+            XPRESS_MORNING -> new TransferMeta(
+            TransferType.FREE_TRANSFER,
+            Money.ZERO_USD,
+            payOnExit
+          );
+          case COBB_LOCAL -> new TransferMeta(
+            TransferType.TRANSFER_WITH_UPCHARGE,
+            usDollars(1.50f),
+            payOnExit
+          );
+          case GCT_LOCAL -> new TransferMeta(
+            TransferType.TRANSFER_WITH_UPCHARGE,
+            usDollars(1),
+            payOnExit
+          );
           default -> new TransferMeta(TransferType.END_TRANSFER);
         };
       case GCT_LOCAL:
@@ -356,17 +367,26 @@ public class AtlantaFareService extends DefaultFareService {
     addFareRules(FareType.electronicSenior, regularFareRules);
   }
 
+  /**
+   * In the base class only the rules for a specific feed are selected and then passed to the
+   * fare engine, however here we want to explicitly compute fares across feed boundaries.
+   */
+  @Nullable
   @Override
-  public boolean populateFare(
-    ItineraryFares fare,
+  protected Collection<FareRuleSet> fareRulesForFeed(FareType fareType, String feedId) {
+    return fareRulesPerType.get(fareType);
+  }
+
+  @Override
+  public ItineraryFares calculateFaresForType(
     Currency currency,
     FareType fareType,
-    List<Leg> rides,
+    List<Leg> legs,
     Collection<FareRuleSet> fareRules
   ) {
     List<ATLTransfer> transfers = new ArrayList<>();
-    for (var ride : rides) {
-      float defaultFare = getLegPrice(ride, fareType, fareRules);
+    for (var ride : legs) {
+      Money defaultFare = getLegPrice(ride, fareType, fareRules);
       if (transfers.isEmpty()) {
         transfers.add(new ATLTransfer(currency, fareType));
       }
@@ -379,13 +399,20 @@ public class AtlantaFareService extends DefaultFareService {
       }
     }
 
-    float cost = 0;
+    Money cost = Money.ZERO_USD;
     for (ATLTransfer transfer : transfers) {
-      cost += transfer.getTotal();
+      cost = cost.plus(transfer.getTotal());
     }
-
-    fare.addFare(fareType, getMoney(currency, cost));
-
-    return true;
+    var fareProduct = new FareProduct(
+      new FeedScopedId(FEED_ID, fareType.name()),
+      fareType.name(),
+      cost,
+      null,
+      null,
+      null
+    );
+    var fare = ItineraryFares.empty();
+    fare.addItineraryProducts(List.of(fareProduct));
+    return fare;
   }
 }

@@ -2,8 +2,10 @@ package org.opentripplanner.raptor.rangeraptor.multicriteria;
 
 import static org.opentripplanner.raptor.api.model.PathLegType.ACCESS;
 
+import java.util.Objects;
 import org.opentripplanner.raptor.api.model.RaptorAccessEgress;
 import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
+import org.opentripplanner.raptor.rangeraptor.internalapi.PassThroughPointsService;
 import org.opentripplanner.raptor.rangeraptor.internalapi.RoutingStrategy;
 import org.opentripplanner.raptor.rangeraptor.internalapi.SlackProvider;
 import org.opentripplanner.raptor.rangeraptor.multicriteria.arrivals.McStopArrival;
@@ -22,32 +24,33 @@ import org.opentripplanner.raptor.util.paretoset.ParetoSet;
  *
  * @param <T> The TripSchedule type defined by the user of the raptor API.
  */
-public final class MultiCriteriaRoutingStrategy<
-  T extends RaptorTripSchedule, R extends PatternRide<T>
->
+public class MultiCriteriaRoutingStrategy<T extends RaptorTripSchedule, R extends PatternRide<T>>
   implements RoutingStrategy<T> {
 
   private final McRangeRaptorWorkerState<T> state;
   private final TimeBasedBoardingSupport<T> boardingSupport;
   private final PatternRideFactory<T, R> patternRideFactory;
   private final ParetoSet<R> patternRides;
-  private final RaptorCostCalculator<T> generalizedCostCalculator;
+  private final PassThroughPointsService passThroughPointsService;
+  private final RaptorCostCalculator<T> c1Calculator;
   private final SlackProvider slackProvider;
 
   public MultiCriteriaRoutingStrategy(
     McRangeRaptorWorkerState<T> state,
     TimeBasedBoardingSupport<T> boardingSupport,
     PatternRideFactory<T, R> patternRideFactory,
-    RaptorCostCalculator<T> generalizedCostCalculator,
+    PassThroughPointsService passThroughPointsService,
+    RaptorCostCalculator<T> c1Calculator,
     SlackProvider slackProvider,
     ParetoSet<R> patternRides
   ) {
-    this.state = state;
-    this.boardingSupport = boardingSupport;
-    this.patternRideFactory = patternRideFactory;
-    this.generalizedCostCalculator = generalizedCostCalculator;
-    this.slackProvider = slackProvider;
-    this.patternRides = patternRides;
+    this.state = Objects.requireNonNull(state);
+    this.boardingSupport = Objects.requireNonNull(boardingSupport);
+    this.patternRideFactory = Objects.requireNonNull(patternRideFactory);
+    this.passThroughPointsService = Objects.requireNonNull(passThroughPointsService);
+    this.c1Calculator = Objects.requireNonNull(c1Calculator);
+    this.slackProvider = Objects.requireNonNull(slackProvider);
+    this.patternRides = Objects.requireNonNull(patternRides);
   }
 
   @Override
@@ -60,6 +63,23 @@ public final class MultiCriteriaRoutingStrategy<
     boardingSupport.prepareForTransitWith(route.timetable());
     patternRideFactory.prepareForTransitWith(route.pattern());
     this.patternRides.clear();
+  }
+
+  @Override
+  public void prepareForNextStop(int stopIndex, int stopPos) {
+    // If no pass-through service exist, this block will be removed by the JIT compiler
+    if (passThroughPointsService.isPassThroughPoint(stopIndex)) {
+      for (R ride : patternRides) {
+        // Replace existing ride with same ride with the C2 value updated. This only happens if
+        // the stop is a pass-through point and the path has visited the pass-through points in the
+        // correct order.
+        //noinspection unchecked
+        passThroughPointsService.updateC2Value(
+          ride.c2(),
+          newC2 -> patternRides.add((R) ride.updateC2(newC2))
+        );
+      }
+    }
   }
 
   @Override
@@ -95,7 +115,6 @@ public final class MultiCriteriaRoutingStrategy<
     }
   }
 
-  @SuppressWarnings("unchecked")
   private void board(
     McStopArrival<T> prevArrival,
     final int stopIndex,
@@ -113,16 +132,17 @@ public final class MultiCriteriaRoutingStrategy<
 
     final int relativeBoardC1 = boardC1 + calculateOnTripRelativeCost(boardTime, trip);
 
-    R ride = patternRideFactory.createPatternRide(
-      prevArrival,
-      stopIndex,
-      boarding.stopPositionInPattern(),
-      boardTime,
-      boardC1,
-      relativeBoardC1,
-      trip
+    patternRides.add(
+      patternRideFactory.createPatternRide(
+        prevArrival,
+        stopIndex,
+        boarding.stopPositionInPattern(),
+        boardTime,
+        boardC1,
+        relativeBoardC1,
+        trip
+      )
     );
-    patternRides.add(ride);
   }
 
   private void boardWithRegularTransfer(
@@ -175,7 +195,7 @@ public final class MultiCriteriaRoutingStrategy<
   ) {
     return (
       prevArrival.c1() +
-      generalizedCostCalculator.boardingCost(
+      c1Calculator.boardingCost(
         prevArrival.isFirstRound(),
         prevArrival.arrivalTime(),
         boardEvent.boardStopIndex(),
@@ -194,6 +214,6 @@ public final class MultiCriteriaRoutingStrategy<
    * origin in the same iteration, having used the same number-of-rounds to board the same trip.
    */
   private int calculateOnTripRelativeCost(int boardTime, T tripSchedule) {
-    return generalizedCostCalculator.onTripRelativeRidingCost(boardTime, tripSchedule);
+    return c1Calculator.onTripRelativeRidingCost(boardTime, tripSchedule);
   }
 }

@@ -20,29 +20,27 @@ Sections follow that describe particular settings in more depth.
 | Config Parameter                                                         |     Type    | Summary                                                                                                                                                        |  Req./Opt. | Default Value                     | Since |
 |--------------------------------------------------------------------------|:-----------:|----------------------------------------------------------------------------------------------------------------------------------------------------------------|:----------:|-----------------------------------|:-----:|
 | [areaVisibility](#areaVisibility)                                        |  `boolean`  | Perform visibility calculations.                                                                                                                               | *Optional* | `false`                           |  1.5  |
-| banDiscouragedBiking                                                     |  `boolean`  | Should biking be allowed on OSM ways tagged with `bicycle=discouraged`                                                                                         | *Optional* | `false`                           |  2.0  |
-| banDiscouragedWalking                                                    |  `boolean`  | Should walking be allowed on OSM ways tagged with `foot=discouraged`                                                                                           | *Optional* | `false`                           |  2.0  |
 | [buildReportDir](#buildReportDir)                                        |    `uri`    | URI to the directory where the graph build report should be written to.                                                                                        | *Optional* |                                   |  2.0  |
 | [configVersion](#configVersion)                                          |   `string`  | Deployment version of the *build-config.json*.                                                                                                                 | *Optional* |                                   |  2.1  |
 | [dataImportReport](#dataImportReport)                                    |  `boolean`  | Generate nice HTML report of Graph errors/warnings                                                                                                             | *Optional* | `false`                           |  2.0  |
 | [distanceBetweenElevationSamples](#distanceBetweenElevationSamples)      |   `double`  | The distance between elevation samples in meters.                                                                                                              | *Optional* | `10.0`                            |  2.0  |
 | embedRouterConfig                                                        |  `boolean`  | Embed the Router config in the graph, which allows it to be sent to a server fully configured over the wire.                                                   | *Optional* | `true`                            |  2.0  |
-| extraEdgesStopPlatformLink                                               |  `boolean`  | Add extra edges when linking a stop to a platform, to prevent detours along the platform edge.                                                                 | *Optional* | `false`                           |  2.0  |
 | [graph](#graph)                                                          |    `uri`    | URI to the graph object file for reading and writing.                                                                                                          | *Optional* |                                   |  2.0  |
 | [gsCredentials](#gsCredentials)                                          |   `string`  | Local file system path to Google Cloud Platform service accounts credentials file.                                                                             | *Optional* |                                   |  2.0  |
 | [includeEllipsoidToGeoidDifference](#includeEllipsoidToGeoidDifference)  |  `boolean`  | Include the Ellipsoid to Geoid difference in the calculations of every point along every StreetWithElevationEdge.                                              | *Optional* | `false`                           |  2.0  |
-| matchBusRoutesToStreets                                                  |  `boolean`  | Based on GTFS shape data, guess which OSM streets each bus runs on to improve stop linking.                                                                    | *Optional* | `false`                           |  1.5  |
-| maxAreaNodes                                                             |  `integer`  | Visibility calculations for an area will not be done if there are more nodes than this limit.                                                                  | *Optional* | `500`                             |  2.1  |
+| maxAreaNodes                                                             |  `integer`  | Visibility calculations for an area will not be done if there are more nodes than this limit.                                                                  | *Optional* | `150`                             |  2.1  |
 | [maxDataImportIssuesPerFile](#maxDataImportIssuesPerFile)                |  `integer`  | When to split the import report.                                                                                                                               | *Optional* | `1000`                            |  2.0  |
 | maxElevationPropagationMeters                                            |  `integer`  | The maximum distance to propagate elevation to vertices which have no elevation.                                                                               | *Optional* | `2000`                            |  1.5  |
 | [maxStopToShapeSnapDistance](#maxStopToShapeSnapDistance)                |   `double`  | Maximum distance between route shapes and their stops.                                                                                                         | *Optional* | `150.0`                           |  2.1  |
 | maxTransferDuration                                                      |  `duration` | Transfers up to this duration with the default walk speed value will be pre-calculated and included in the Graph.                                              | *Optional* | `"PT30M"`                         |  2.1  |
 | [multiThreadElevationCalculations](#multiThreadElevationCalculations)    |  `boolean`  | Configuring multi-threading during elevation calculations.                                                                                                     | *Optional* | `false`                           |  2.0  |
 | [osmCacheDataInMem](#osmCacheDataInMem)                                  |  `boolean`  | If OSM data should be cached in memory during processing.                                                                                                      | *Optional* | `false`                           |  2.0  |
+| osmNaming                                                                |   `string`  | A custom OSM namer to use.                                                                                                                                     | *Optional* |                                   |  2.0  |
 | platformEntriesLinking                                                   |  `boolean`  | Link unconnected entries to public transport platforms.                                                                                                        | *Optional* | `false`                           |  2.0  |
 | [readCachedElevations](#readCachedElevations)                            |  `boolean`  | Whether to read cached elevation data.                                                                                                                         | *Optional* | `true`                            |  2.0  |
 | staticBikeParkAndRide                                                    |  `boolean`  | Whether we should create bike P+R stations from OSM data.                                                                                                      | *Optional* | `false`                           |  1.5  |
 | staticParkAndRide                                                        |  `boolean`  | Whether we should create car P+R stations from OSM data.                                                                                                       | *Optional* | `true`                            |  1.5  |
+| stopConsolidationFile                                                    |    `uri`    | Name of the CSV-formatted file in the build directory which contains the configuration for stop consolidation.                                                 | *Optional* |                                   |  2.5  |
 | [streetGraph](#streetGraph)                                              |    `uri`    | URI to the street graph object file for reading and writing.                                                                                                   | *Optional* |                                   |  2.0  |
 | [subwayAccessTime](#subwayAccessTime)                                    |   `double`  | Minutes necessary to reach stops served by trips on routes of route_type=1 (subway) from the street.                                                           | *Optional* | `2.0`                             |  1.5  |
 | [transitModelTimeZone](#transitModelTimeZone)                            | `time-zone` | Time zone for the graph.                                                                                                                                       | *Optional* |                                   |  2.2  |
@@ -57,6 +55,7 @@ Sections follow that describe particular settings in more depth.
 | demDefaults                                                              |   `object`  | Default properties for DEM extracts.                                                                                                                           | *Optional* |                                   |  2.3  |
 |    [elevationUnitMultiplier](#demDefaults_elevationUnitMultiplier)       |   `double`  | Specify a multiplier to convert elevation units from source to meters.                                                                                         | *Optional* | `1.0`                             |  2.3  |
 | [elevationBucket](#elevationBucket)                                      |   `object`  | Used to download NED elevation tiles from the given AWS S3 bucket.                                                                                             | *Optional* |                                   |   na  |
+| [emissions](sandbox/Emissions.md)                                        |   `object`  | Emissions configuration.                                                                                                                                       | *Optional* |                                   |  2.5  |
 | [fares](sandbox/Fares.md)                                                |   `object`  | Fare configuration.                                                                                                                                            | *Optional* |                                   |  2.0  |
 | gtfsDefaults                                                             |   `object`  | The gtfsDefaults section allows you to specify default properties for GTFS files.                                                                              | *Optional* |                                   |  2.3  |
 |    blockBasedInterlining                                                 |  `boolean`  | Whether to create stay-seated transfers in between two trips with the same block id.                                                                           | *Optional* | `true`                            |  2.3  |
@@ -90,7 +89,6 @@ Sections follow that describe particular settings in more depth.
 | osmDefaults                                                              |   `object`  | Default properties for OpenStreetMap feeds.                                                                                                                    | *Optional* |                                   |  2.2  |
 |    [osmTagMapping](#od_osmTagMapping)                                    |    `enum`   | The named set of mapping rules applied when parsing OSM tags.                                                                                                  | *Optional* | `"default"`                       |  2.2  |
 |    timeZone                                                              | `time-zone` | The timezone used to resolve opening hours in OSM data.                                                                                                        | *Optional* |                                   |  2.2  |
-| osmNaming                                                                |   `object`  | A custom OSM namer to use.                                                                                                                                     | *Optional* |                                   |  2.0  |
 | [transferRequests](RouteRequest.md)                                      |  `object[]` | Routing requests to use for pre-calculating stop-to-stop transfers.                                                                                            | *Optional* |                                   |  2.1  |
 | [transitFeeds](#transitFeeds)                                            |  `object[]` | Scan for transit data files                                                                                                                                    | *Optional* |                                   |  2.2  |
 |    { object }                                                            |   `object`  | Nested object in array. The object type is determined by the parameters.                                                                                       | *Optional* |                                   |  2.2  |
@@ -207,25 +205,6 @@ general better than trying to be exact. The period and date format follow the IS
   "transitServiceEnd" : "P1Y6M5D"
 }
 ```
-
-
-<h2 id="transferring-within-stations">Transferring within stations</h2>
-
-Subway systems tend to exist in their own layer of the city separate from the surface, though there
-are exceptions where tracks lie right below the street and transfers happen via the surface. In
-systems where the subway is quite deep and transfers happen via tunnels, the time required for an
-in-station transfer is often less than that for a surface transfer.
-
-One way to resolve this problem is by ensuring that the GTFS feed codes each platform as a separate
-stop, then micro-mapping stations in OSM. When OSM data contains a detailed description of walkways,
-stairs, and platforms within a station, GTFS stops can be linked to the nearest platform and
-transfers will happen via the OSM ways, which should yield very realistic transfer time
-expectations. This works particularly well in above-ground train stations where the layering of
-non-intersecting ways is less prevalent. See [BoardingLocations](BoardingLocations.md) for more 
-details.
-
-An alternative approach is to use GTFS pathways to model entrances and platforms within stations.
-
 
 ## OpenStreetMap(OSM) configuration
 
@@ -586,7 +565,7 @@ The file is created or overwritten if OTP saves the graph to the file
 Minutes necessary to reach stops served by trips on routes of route_type=1 (subway) from the street.
 
 Note! The preferred way to do this is to update the OSM data.
-See [Transferring within stations](#transferring-within-stations).
+See [In-station navigation](In-Station-Navigation.md).
 
 The ride locations for some modes of transport such as subways can be slow to reach from the street.
 When planning a trip, we need to allow additional time to reach these locations to properly inform
@@ -966,7 +945,7 @@ the local filesystem.
 
 **Since version:** `2.2` ∙ **Type:** `enum` ∙ **Cardinality:** `Optional` ∙ **Default value:** `"default"`   
 **Path:** /osm/[0]   
-**Enum values:** `default` | `norway` | `uk` | `finland` | `germany` | `atlanta` | `houston` | `portland`
+**Enum values:** `default` | `norway` | `uk` | `finland` | `germany` | `hamburg` | `atlanta` | `houston` | `portland` | `constant-speed-finland`
 
 The named set of mapping rules applied when parsing OSM tags. Overrides the value specified in `osmDefaults`.
 
@@ -974,7 +953,7 @@ The named set of mapping rules applied when parsing OSM tags. Overrides the valu
 
 **Since version:** `2.2` ∙ **Type:** `enum` ∙ **Cardinality:** `Optional` ∙ **Default value:** `"default"`   
 **Path:** /osmDefaults   
-**Enum values:** `default` | `norway` | `uk` | `finland` | `germany` | `atlanta` | `houston` | `portland`
+**Enum values:** `default` | `norway` | `uk` | `finland` | `germany` | `hamburg` | `atlanta` | `houston` | `portland` | `constant-speed-finland`
 
 The named set of mapping rules applied when parsing OSM tags.
 
@@ -1163,7 +1142,7 @@ case where this is not the case.
     {
       "type" : "gtfs",
       "feedId" : "SE",
-      "source" : "gs://BUCKET/OTP_GCS_WORK_DIR/sweeden-gtfs.obj"
+      "source" : "https://skanetrafiken.se/download/sweden.gtfs.zip"
     },
     {
       "type" : "netex",
@@ -1185,7 +1164,12 @@ case where this is not the case.
         "enabled" : true
       }
     }
-  ]
+  ],
+  "stopConsolidationFile" : "consolidated-stops.csv",
+  "emissions" : {
+    "carAvgCo2PerKm" : 170,
+    "carAvgOccupancy" : 1.3
+  }
 }
 ```
 

@@ -1,22 +1,42 @@
 package org.opentripplanner.framework.lang;
 
+import static java.lang.Boolean.FALSE;
+import static java.lang.Boolean.TRUE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class StringUtilsTest {
 
+  static Stream<Arguments> hasValueTestCases() {
+    return Stream.of(
+      Arguments.of("Text", TRUE),
+      Arguments.of("T", TRUE),
+      Arguments.of(null, FALSE),
+      Arguments.of("", FALSE),
+      Arguments.of("\t\n", FALSE)
+    );
+  }
+
+  @ParameterizedTest
+  @MethodSource("hasValueTestCases")
+  void hasValue(String input, Boolean hasValue) {
+    assertEquals(hasValue, StringUtils.hasValue(input));
+    assertEquals(!hasValue, StringUtils.hasNoValue(input));
+    assertEquals(!hasValue, StringUtils.hasNoValueOrNullAsString(input));
+  }
+
   @Test
-  void hasValue() {
-    assertTrue(StringUtils.hasValue("Text"));
-    assertTrue(StringUtils.hasValue(" T "));
-    assertFalse(StringUtils.hasValue(null));
-    assertFalse(StringUtils.hasValue(""));
-    assertFalse(StringUtils.hasValue(" "));
-    assertFalse(StringUtils.hasValue("\n\t"));
+  void hasNoValueOrNullAsString() {
+    assertTrue(StringUtils.hasNoValueOrNullAsString("null"));
   }
 
   @Test
@@ -65,5 +85,19 @@ class StringUtilsTest {
   @Test
   void quoteReplace() {
     assertEquals("\"key\" : \"value\"", StringUtils.quoteReplace("'key' : 'value'"));
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+    strings = { "\u200B", "\n", "\t", "\thello", "f\noo", "\ntri\nmet:123\t", "tri\u200Bmet:123" }
+  )
+  void containsInvisibleChars(String input) {
+    assertTrue(StringUtils.containsInvisibleCharacters(input));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = { "", " ", "hello", " hello", " fo o " })
+  void noInvisibleChars(String input) {
+    assertFalse(StringUtils.containsInvisibleCharacters(input));
   }
 }

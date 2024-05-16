@@ -44,6 +44,7 @@ public class TimeUtilsTest {
     assertEquals("0:58:59", TimeUtils.timeToStrCompact(T00_58_59));
     assertEquals("13:33:57", TimeUtils.timeToStrCompact(T13_33_57, NOT_SET));
     assertEquals("", TimeUtils.timeToStrCompact(NOT_SET, NOT_SET));
+    assertEquals("NOT-SET", TimeUtils.timeToStrCompact(NOT_SET, NOT_SET, "NOT-SET"));
     assertEquals("9:36:07", TimeUtils.timeToStrCompact(CAL));
     assertEquals("10:26:03-1d", TimeUtils.timeToStrCompact(-T13_33_57));
   }
@@ -163,6 +164,22 @@ public class TimeUtilsTest {
       "2021-11-01T03:03+01:00[Europe/Oslo]",
       TimeUtils.zonedDateTime(D2021_10_31, T26_03, CET).toString()
     );
+  }
+
+  @Test
+  void testMsToString() {
+    assertEquals("0s", TimeUtils.msToString(0));
+    assertEquals("0.001s", TimeUtils.msToString(1));
+    assertEquals("0.012s", TimeUtils.msToString(12));
+    assertEquals("1s", TimeUtils.msToString(1000));
+    assertEquals("1.1s", TimeUtils.msToString(1100));
+    assertEquals("1.02s", TimeUtils.msToString(1020));
+    assertEquals("1.003s", TimeUtils.msToString(1003));
+    assertEquals("1.234s", TimeUtils.msToString(1234));
+
+    // Negative numbers
+    assertEquals("-1s", TimeUtils.msToString(-1000));
+    assertEquals("-1.234s", TimeUtils.msToString(-1234));
   }
 
   private static int time(int hour, int min, int sec) {

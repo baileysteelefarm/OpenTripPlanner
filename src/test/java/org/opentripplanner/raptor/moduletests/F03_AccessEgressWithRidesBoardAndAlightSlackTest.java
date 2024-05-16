@@ -20,6 +20,7 @@ import org.opentripplanner.raptor._data.transit.TestTransitData;
 import org.opentripplanner.raptor._data.transit.TestTripSchedule;
 import org.opentripplanner.raptor.api.request.RaptorRequestBuilder;
 import org.opentripplanner.raptor.configure.RaptorConfig;
+import org.opentripplanner.raptor.moduletests.support.ModuleTestDebugLogging;
 import org.opentripplanner.raptor.moduletests.support.RaptorModuleTestCase;
 import org.opentripplanner.raptor.spi.DefaultSlackProvider;
 
@@ -74,7 +75,7 @@ public class F03_AccessEgressWithRidesBoardAndAlightSlackTest implements RaptorT
   static List<RaptorModuleTestCase> testCases() {
     var path =
       "Flex+Walk 2m 1x ~ B ~ BUS R1 0:04 0:06 ~ C ~ Flex 2m 1x " +
-      "[0:00:30 0:09:10 8m40s 2tx $1360]";
+      "[0:00:30 0:09:10 8m40s Tₓ2 C₁1_360]";
     return RaptorModuleTestCase
       .of()
       // TODO - Alight slack is missing

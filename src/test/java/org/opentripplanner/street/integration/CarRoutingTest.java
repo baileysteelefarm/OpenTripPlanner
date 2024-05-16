@@ -22,16 +22,20 @@ import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.impl.GraphPathFinder;
 import org.opentripplanner.street.search.TemporaryVerticesContainer;
 import org.opentripplanner.street.search.TraverseMode;
+import org.opentripplanner.test.support.ResourceLoader;
 
 public class CarRoutingTest {
 
   static final Instant dateTime = Instant.now();
+  private static final ResourceLoader RESOURCE_LOADER = ResourceLoader.of(CarRoutingTest.class);
 
   private static Graph herrenbergGraph;
 
   @BeforeAll
   public static void setup() {
-    TestOtpModel model = ConstantsForTests.buildOsmGraph(ConstantsForTests.HERRENBERG_OSM);
+    TestOtpModel model = ConstantsForTests.buildOsmGraph(
+      RESOURCE_LOADER.file("herrenberg-minimal.osm.pbf")
+    );
     herrenbergGraph = model.index().graph();
   }
 
@@ -53,18 +57,18 @@ public class CarRoutingTest {
   @DisplayName("car routes can contain loops (traversing the same edge twice)")
   public void shouldAllowLoopCausedByTurnRestrictions() {
     TestOtpModel model = ConstantsForTests.buildOsmGraph(
-      ConstantsForTests.HERRENBERG_HINDENBURG_STR_UNDER_CONSTRUCTION_OSM
+      RESOURCE_LOADER.file("herrenberg-hindenburgstr-under-construction.osm.pbf")
     );
     var hindenburgStrUnderConstruction = model.index().graph();
 
-    var gueltsteinerStr = new GenericLocation(48.59240, 8.87024);
+    var gueltsteinerStr = new GenericLocation(48.59386, 8.87088);
     var aufDemGraben = new GenericLocation(48.59487, 8.87133);
 
     var polyline = computePolyline(hindenburgStrUnderConstruction, gueltsteinerStr, aufDemGraben);
 
     assertThatPolylinesAreEqual(
       polyline,
-      "ouqgH}mcu@gAE]U}BaA]Q}@]uAs@[SAm@Ee@AUEi@XEQkBQ?Bz@Dt@Dh@@TGBC@KBSHGx@"
+      "s~qgH}qcu@[MuAs@[SAm@Ee@AUEi@XEQkBQ?Bz@Dt@Dh@@TGBC@KBSHGx@"
     );
   }
 

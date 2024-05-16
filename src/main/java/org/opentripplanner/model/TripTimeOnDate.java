@@ -112,6 +112,13 @@ public class TripTimeOnDate {
     return tripTimes.getScheduledArrivalTime(stopIndex);
   }
 
+  /**
+   * @return The GTFS stop sequence of the stop time.
+   */
+  public int getGtfsSequence() {
+    return tripTimes.gtfsSequenceOfStopIndex(stopIndex);
+  }
+
   public int getScheduledDeparture() {
     return tripTimes.getScheduledDepartureTime(stopIndex);
   }
@@ -182,7 +189,7 @@ public class TripTimeOnDate {
     return tripTimes.isNoDataStop(stopIndex);
   }
 
-  public RealTimeState getRealtimeState() {
+  public RealTimeState getRealTimeState() {
     return tripTimes.isNoDataStop(stopIndex)
       ? RealTimeState.SCHEDULED
       : tripTimes.getRealTimeState();

@@ -22,6 +22,7 @@ import org.opentripplanner.raptor._data.transit.TestTransitData;
 import org.opentripplanner.raptor._data.transit.TestTripSchedule;
 import org.opentripplanner.raptor.api.request.RaptorRequestBuilder;
 import org.opentripplanner.raptor.configure.RaptorConfig;
+import org.opentripplanner.raptor.moduletests.support.ModuleTestDebugLogging;
 import org.opentripplanner.raptor.moduletests.support.RaptorModuleTestCase;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.cost.RaptorCostConverter;
 
@@ -34,7 +35,7 @@ import org.opentripplanner.routing.algorithm.raptoradapter.transit.cost.RaptorCo
  */
 public class H11_GuaranteedTransferWithFlexAccessTest implements RaptorTestConstants {
 
-  private static final int COST_ONE_STOP = RaptorCostConverter.toRaptorCost(2 * 60);
+  private static final int C1_ONE_STOP = RaptorCostConverter.toRaptorCost(2 * 60);
 
   private final TestTransitData data = new TestTransitData();
   private final RaptorRequestBuilder<TestTripSchedule> requestBuilder = new RaptorRequestBuilder<>();
@@ -57,7 +58,7 @@ public class H11_GuaranteedTransferWithFlexAccessTest implements RaptorTestConst
 
     requestBuilder
       .searchParams()
-      .addAccessPaths(flex(STOP_A, D3m, ONE_RIDE, 2 * COST_ONE_STOP))
+      .addAccessPaths(flex(STOP_A, D3m, ONE_RIDE, 2 * C1_ONE_STOP))
       .addEgressPaths(walk(STOP_D, D1m));
 
     requestBuilder
@@ -76,12 +77,12 @@ public class H11_GuaranteedTransferWithFlexAccessTest implements RaptorTestConst
       "~ BUS R1 0:30 0:45 ~ C " +
       "~ BUS R2 0:45 0:55 ~ D " +
       "~ Walk 1m " +
-      "[0:16 0:56 40m 2tx $3820]";
+      "[0:16 0:56 40m Tₓ2 C₁3_820]";
 
     return RaptorModuleTestCase
       .of()
-      .add(TC_MIN_DURATION, "[0:00 0:40 40m 2tx]")
-      .add(TC_MIN_DURATION_REV, "[0:20 1:00 40m 2tx]")
+      .add(TC_MIN_DURATION, "[0:00 0:40 40m Tₓ2]")
+      .add(TC_MIN_DURATION_REV, "[0:20 1:00 40m Tₓ2]")
       .add(standard(), withoutCost(expected))
       .add(multiCriteria(), expected)
       .build();

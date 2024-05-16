@@ -21,7 +21,7 @@ import org.opentripplanner.netex.index.api.ReadOnlyHierarchicalMap;
 import org.opentripplanner.netex.index.api.ReadOnlyHierarchicalMapById;
 import org.opentripplanner.netex.mapping.support.FeedScopedIdFactory;
 import org.opentripplanner.netex.support.JourneyPatternHelper;
-import org.opentripplanner.transit.model.framework.EntityById;
+import org.opentripplanner.transit.model.framework.ImmutableEntityById;
 import org.opentripplanner.transit.model.site.AreaStop;
 import org.opentripplanner.transit.model.site.GroupStop;
 import org.opentripplanner.transit.model.site.RegularStop;
@@ -47,6 +47,8 @@ import org.rutebanken.netex.model.Vias_RelStructure;
  * StopTime has a reference to the correct stop. DestinationDisplay is mapped to HeadSign. There is
  * logic to take care of the the fact that DestinationsDisplay is also valid for each subsequent
  * TimeTabledPassingTime, while HeadSign has to be explicitly defined for each StopTime.
+ * This class does not take Daylight Saving Time transitions into account, this is an error and
+ * should be fixed. See https://github.com/opentripplanner/OpenTripPlanner/issues/5109
  */
 class StopTimesMapper {
 
@@ -56,11 +58,11 @@ class StopTimesMapper {
 
   private final ReadOnlyHierarchicalMap<String, DestinationDisplay> destinationDisplayById;
 
-  private final EntityById<RegularStop> stopsById;
+  private final ImmutableEntityById<RegularStop> stopsById;
 
-  private final EntityById<AreaStop> flexibleStopLocationsById;
+  private final ImmutableEntityById<AreaStop> flexibleStopLocationsById;
 
-  private final EntityById<GroupStop> groupStopById;
+  private final ImmutableEntityById<GroupStop> groupStopById;
 
   private final ReadOnlyHierarchicalMap<String, String> quayIdByStopPointRef;
 
@@ -77,9 +79,9 @@ class StopTimesMapper {
   StopTimesMapper(
     DataImportIssueStore issueStore,
     FeedScopedIdFactory idFactory,
-    EntityById<RegularStop> stopsById,
-    EntityById<AreaStop> areaStopById,
-    EntityById<GroupStop> groupStopById,
+    ImmutableEntityById<RegularStop> stopsById,
+    ImmutableEntityById<AreaStop> areaStopById,
+    ImmutableEntityById<GroupStop> groupStopById,
     ReadOnlyHierarchicalMap<String, DestinationDisplay> destinationDisplayById,
     ReadOnlyHierarchicalMap<String, String> quayIdByStopPointRef,
     ReadOnlyHierarchicalMap<String, String> flexibleStopPlaceIdByStopPointRef,

@@ -32,6 +32,7 @@ import org.opentripplanner.transit.model.network.TripPattern;
 import org.opentripplanner.transit.model.organization.Agency;
 import org.opentripplanner.transit.model.organization.Operator;
 import org.opentripplanner.transit.model.site.AreaStop;
+import org.opentripplanner.transit.model.site.GroupStop;
 import org.opentripplanner.transit.model.site.MultiModalStation;
 import org.opentripplanner.transit.model.site.RegularStop;
 import org.opentripplanner.transit.model.site.Station;
@@ -95,7 +96,11 @@ public interface TransitService {
 
   Collection<RegularStop> listRegularStops();
 
+  Collection<GroupStop> listGroupStops();
+
   StopLocation getStopLocation(FeedScopedId parseId);
+
+  Collection<StopLocation> getStopOrChildStops(FeedScopedId id);
 
   Collection<StopLocationsGroup> listStopLocationGroups();
 
@@ -185,9 +190,32 @@ public interface TransitService {
 
   boolean transitFeedCovers(Instant dateTime);
 
-  Collection<RegularStop> findRegularStop(Envelope envelope);
+  Collection<RegularStop> findRegularStops(Envelope envelope);
 
   Collection<AreaStop> findAreaStops(Envelope envelope);
 
   GraphUpdaterStatus getUpdaterStatus();
+
+  /**
+   * For a {@link StopLocationsGroup} get all child stops and get their modes.
+   * <p>
+   * The mode is either taken from {@link StopLocation#getGtfsVehicleType()} (if non-null)
+   * or from the list of patterns that use the stop location.
+   * <p>
+   * The returning stream is ordered by the number of occurrences of the mode in the child stops.
+   * So, if more patterns of mode BUS than RAIL visit the group, the result will be [BUS,RAIL].
+   */
+  List<TransitMode> getModesOfStopLocationsGroup(StopLocationsGroup station);
+  /**
+   * For a {@link StopLocation} return its modes.
+   * <p>
+   * The mode is either taken from {@link StopLocation#getGtfsVehicleType()} (if non-null)
+   * or from the list of patterns that use the stop location.
+   * <p>
+   * If {@link StopLocation#getGtfsVehicleType()} is null the returning stream is ordered by the number
+   * of occurrences of the mode in the stop.
+   * <p>
+   * So, if more patterns of mode BUS than RAIL visit the stop, the result will be [BUS,RAIL].
+   */
+  List<TransitMode> getModesOfStopLocation(StopLocation stop);
 }

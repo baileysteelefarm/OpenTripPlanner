@@ -6,6 +6,7 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.ParameterException;
 import org.geotools.referencing.factory.DeferredAuthorityFactory;
 import org.geotools.util.WeakCollectionCleaner;
+import org.opentripplanner.framework.application.ApplicationShutdownSupport;
 import org.opentripplanner.framework.application.OtpAppException;
 import org.opentripplanner.graph_builder.GraphBuilder;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueSummary;
@@ -48,6 +49,7 @@ public class OTPMain {
    */
   public static void main(String[] args) {
     try {
+      Thread.currentThread().setName("main");
       CommandLineParameters params = parseAndValidateCmdLine(args);
       OtpStartupInfo.logInfo();
       startOTPServer(params);
@@ -149,7 +151,10 @@ public class OTPMain {
         app.worldEnvelopeRepository(),
         config.buildConfig(),
         config.routerConfig(),
-        DataImportIssueSummary.combine(graphBuilder.issueSummary(), app.dataImportIssueSummary())
+        DataImportIssueSummary.combine(graphBuilder.issueSummary(), app.dataImportIssueSummary()),
+        app.emissionsDataModel(),
+        app.stopConsolidationRepository(),
+        app.streetLimitationParameters()
       )
         .save(app.graphOutputDataSource());
       // Log size info for the deduplicator
@@ -202,7 +207,6 @@ public class OTPMain {
             throwable
           );
         }
-        logLocationOfRequestLog(app.routerConfig().requestLogFile());
       }
     }
   }
@@ -219,22 +223,17 @@ public class OTPMain {
     TransitModel transitModel,
     RaptorConfig<?> raptorConfig
   ) {
-    var hook = new Thread(() -> {
-      LOG.info("OTP shutdown started...");
-      UpdaterConfigurator.shutdownGraph(transitModel);
-      raptorConfig.shutdown();
-      WeakCollectionCleaner.DEFAULT.exit();
-      DeferredAuthorityFactory.exit();
-    });
-    Runtime.getRuntime().addShutdownHook(hook);
-  }
-
-  private static void logLocationOfRequestLog(String requestLogFile) {
-    if (requestLogFile != null) {
-      LOG.info("Logging incoming requests at '{}'", requestLogFile);
-    } else {
-      LOG.info("Incoming requests will not be logged.");
-    }
+    ApplicationShutdownSupport.addShutdownHook(
+      "server-shutdown",
+      () -> {
+        LOG.info("OTP shutdown started...");
+        UpdaterConfigurator.shutdownGraph(transitModel);
+        raptorConfig.shutdown();
+        WeakCollectionCleaner.DEFAULT.exit();
+        DeferredAuthorityFactory.exit();
+        LOG.info("OTP shutdown: resources released...");
+      }
+    );
   }
 
   private static void setOtpConfigVersionsOnServerInfo(ConstructApplication app) {

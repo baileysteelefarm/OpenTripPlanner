@@ -60,14 +60,14 @@ public class HslParkUpdater implements DataSource<VehicleParking> {
         parameters.utilizationsUrl(),
         "",
         parkPatchMapper::parseUtilization,
-        null
+        Map.of()
       );
     this.facilitiesFrequencySec = parameters.facilitiesFrequencySec();
   }
 
   /**
    * Update the data from the sources. It first fetches parks from the facilities URL and park
-   * groups from hubs URL and then realtime updates from utilizations URL. If facilitiesFrequencySec
+   * groups from hubs URL and then real-time updates from utilizations URL. If facilitiesFrequencySec
    * is configured to be over 0, it also occasionally retches the parks as new parks might have been
    * added or the state of the old parks might have changed.
    *

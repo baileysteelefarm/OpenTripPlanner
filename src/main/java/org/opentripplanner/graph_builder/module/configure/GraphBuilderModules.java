@@ -8,9 +8,14 @@ import jakarta.inject.Singleton;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import javax.annotation.Nullable;
 import org.opentripplanner.datastore.api.DataSource;
 import org.opentripplanner.ext.dataoverlay.EdgeUpdaterModule;
 import org.opentripplanner.ext.dataoverlay.configure.DataOverlayFactory;
+import org.opentripplanner.ext.emissions.EmissionsDataModel;
+import org.opentripplanner.ext.emissions.EmissionsModule;
+import org.opentripplanner.ext.stopconsolidation.StopConsolidationModule;
+import org.opentripplanner.ext.stopconsolidation.StopConsolidationRepository;
 import org.opentripplanner.ext.transferanalyzer.DirectTransferAnalyzer;
 import org.opentripplanner.graph_builder.ConfiguredDataSource;
 import org.opentripplanner.graph_builder.GraphBuilderDataSources;
@@ -26,7 +31,7 @@ import org.opentripplanner.graph_builder.module.ned.ElevationModule;
 import org.opentripplanner.graph_builder.module.ned.GeotiffGridCoverageFactoryImpl;
 import org.opentripplanner.graph_builder.module.ned.NEDGridCoverageFactoryImpl;
 import org.opentripplanner.graph_builder.module.ned.parameter.DemExtractParameters;
-import org.opentripplanner.graph_builder.module.osm.OpenStreetMapModule;
+import org.opentripplanner.graph_builder.module.osm.OsmModule;
 import org.opentripplanner.graph_builder.module.osm.parameters.OsmExtractParameters;
 import org.opentripplanner.graph_builder.services.ned.ElevationGridCoverageFactory;
 import org.opentripplanner.gtfs.graphbuilder.GtfsBundle;
@@ -34,45 +39,53 @@ import org.opentripplanner.gtfs.graphbuilder.GtfsFeedParameters;
 import org.opentripplanner.gtfs.graphbuilder.GtfsModule;
 import org.opentripplanner.netex.NetexModule;
 import org.opentripplanner.netex.configure.NetexConfigure;
-import org.opentripplanner.openstreetmap.OpenStreetMapProvider;
+import org.opentripplanner.openstreetmap.OsmProvider;
 import org.opentripplanner.routing.api.request.preference.WalkPreferences;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.standalone.config.BuildConfig;
+import org.opentripplanner.street.model.StreetLimitationParameters;
 import org.opentripplanner.transit.service.TransitModel;
 
 /**
- * Configure all modules witch is not simple enough to be injected.
+ * Configure all modules which is not simple enough to be injected.
  */
 @Module
 public class GraphBuilderModules {
 
   @Provides
   @Singleton
-  static OpenStreetMapModule provideOpenStreetMapModule(
+  static OsmModule provideOpenStreetMapModule(
     GraphBuilderDataSources dataSources,
     BuildConfig config,
     Graph graph,
-    DataImportIssueStore issueStore
+    DataImportIssueStore issueStore,
+    StreetLimitationParameters streetLimitationParameters
   ) {
-    List<OpenStreetMapProvider> providers = new ArrayList<>();
+    List<OsmProvider> providers = new ArrayList<>();
     for (ConfiguredDataSource<OsmExtractParameters> osmConfiguredDataSource : dataSources.getOsmConfiguredDatasource()) {
       providers.add(
-        new OpenStreetMapProvider(
+        new OsmProvider(
           osmConfiguredDataSource.dataSource(),
           osmConfiguredDataSource.config().osmTagMapper(),
           osmConfiguredDataSource.config().timeZone(),
-          config.osmCacheDataInMem
+          config.osmCacheDataInMem,
+          issueStore
         )
       );
     }
 
-    return new OpenStreetMapModule(
-      config,
-      providers,
-      config.boardingLocationTags,
-      graph,
-      issueStore
-    );
+    return OsmModule
+      .of(providers, graph)
+      .withEdgeNamer(config.edgeNamer)
+      .withAreaVisibility(config.areaVisibility)
+      .withPlatformEntriesLinking(config.platformEntriesLinking)
+      .withStaticParkAndRide(config.staticParkAndRide)
+      .withStaticBikeParkAndRide(config.staticBikeParkAndRide)
+      .withMaxAreaNodes(config.maxAreaNodes)
+      .withBoardingAreaRefTags(config.boardingLocationTags)
+      .withIssueStore(issueStore)
+      .withStreetLimitationParameters(streetLimitationParameters)
+      .build();
   }
 
   @Provides
@@ -99,6 +112,22 @@ public class GraphBuilderModules {
       issueStore,
       config.getTransitServicePeriod(),
       config.fareServiceFactory
+    );
+  }
+
+  @Provides
+  @Singleton
+  static EmissionsModule provideEmissionsModule(
+    GraphBuilderDataSources dataSources,
+    BuildConfig config,
+    @Nullable EmissionsDataModel emissionsDataModel,
+    DataImportIssueStore issueStore
+  ) {
+    return new EmissionsModule(
+      dataSources.getGtfsConfiguredDatasource(),
+      config,
+      emissionsDataModel,
+      issueStore
     );
   }
 
@@ -162,7 +191,7 @@ public class GraphBuilderModules {
     BuildConfig config,
     GraphBuilderDataSources dataSources,
     Graph graph,
-    OpenStreetMapModule osmModule,
+    OsmModule osmModule,
     DataImportIssueStore issueStore
   ) {
     List<ElevationModule> result = new ArrayList<>();
@@ -254,8 +283,23 @@ public class GraphBuilderModules {
   }
 
   @Provides
+  @Singleton
   static DataImportIssueSummary providesDataImportIssueSummary(DataImportIssueStore issueStore) {
     return new DataImportIssueSummary(issueStore.listIssues());
+  }
+
+  @Provides
+  @Singleton
+  @Nullable
+  static StopConsolidationModule providesStopConsolidationModule(
+    TransitModel transitModel,
+    @Nullable StopConsolidationRepository repo,
+    GraphBuilderDataSources dataSources
+  ) {
+    return dataSources
+      .stopConsolidation()
+      .map(ds -> StopConsolidationModule.of(transitModel, repo, ds))
+      .orElse(null);
   }
 
   /* private methods */
@@ -291,7 +335,7 @@ public class GraphBuilderModules {
     Graph graph,
     DataImportIssueStore issueStore,
     ElevationGridCoverageFactory it,
-    OpenStreetMapModule osmModule,
+    OsmModule osmModule,
     File cacheDirectory
   ) {
     var cachedElevationsFile = new File(cacheDirectory, "cached_elevations.obj");

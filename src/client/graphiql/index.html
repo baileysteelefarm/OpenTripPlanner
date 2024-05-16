@@ -22,34 +22,68 @@
     include them directly in your favored resource bundler.
   -->
 
-  <script src="https://cdn.jsdelivr.net/npm/react@17/umd/react.development.js" integrity="sha384-xQwCoNcK/7P3Lpv50IZSEbJdpqbToWEODAUyI/RECaRXmOE2apWt7htari8kvKa/" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/react-dom@17/umd/react-dom.development.js" integrity="sha384-E9IgxDsnjKgh0777N3lXen7NwXeTsOpLLJhI01SW7idG046SRqJpsW2rJwsOYk0L" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js" integrity="sha256-hXNk4rmCMYQXAl+5tLg1XAn3X6RroL6T9SD3afZ1eng=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js" integrity="sha256-bRHakm3eFVwNh3OuDgW7ZGg/H0DU4etihxfdhJkXIoI=" crossorigin="anonymous"></script>
 
   <!--
     These two files can be found in the npm module, however you may wish to
     copy them directly into your environment, or perhaps include them in your
     favored resource bundler.
    -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/graphiql@2.4.1/graphiql.min.css" integrity="sha256-88yn8FJMyGboGs4Bj+Pbb3kWOWXo7jmb+XCRHE+282k=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/graphiql@3.0.4/graphiql.min.css" integrity="sha256-wTzfn13a+pLMB5rMeysPPR1hO7x0SwSeQI+cnw7VdbE=" crossorigin="anonymous">
   <title>OTP GraphQL Explorer</title>
 </head>
 
 <body>
 <div id="graphiql">Loading...</div>
-<script src="https://cdn.jsdelivr.net/npm/graphiql@2.4.1/graphiql.min.js" integrity="sha256-s+f7CFAPSUIygFnRC2nfoiEKd3liCUy+snSdYFAoLUc=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/graphiql@3.0.4/graphiql.min.js" integrity="sha256-t0BNtgZ2L82dpHhlgKJl4yJ1tbQxcp1N5NkEjR82A7E=" crossorigin="anonymous"></script>
 
 <script>
-  const defaultQuery = `
-# This is an example query for displaying all routes of your OTP deployment.
+  const gtfsExampleQuery = `
+# This is an example query for fetching all routes of your OTP deployment.
 # Click on the documentation icon on the left to read about the available types
-# or use the autocomplete to explore the schema.
-query {
+# or use autocomplete to explore the schema.
+query GtfsExampleQuery {
   routes {
     shortName
     longName
   }
 }
 `;
+  const transmodelExampleQuery = `
+# This is an example query for fetching the OTP version and a trip. Change the
+# coordinates to fit your OTP deployment.
+query TransmodelExampleQuery {
+  serverInfo {
+    version
+  }
+  trip(
+    from: {
+      coordinates: {
+        latitude: 58.89053
+        longitude: 5.71654
+      }
+    }
+    to: {
+      coordinates: {
+        latitude: 58.96134
+        longitude: 5.72525
+      }
+    }
+  ) {
+    tripPatterns {
+      expectedStartTime
+      legs {
+        mode
+        line {
+          publicCode
+          name
+        }
+      }
+    }
+  }
+}
+`
 
   // Parse the search string to get url parameters.
   var search = window.location.search;
@@ -98,7 +132,7 @@ query {
   }
 
   function updateURL() {
-    if(parameters["query"] !== defaultQuery) {
+    if(parameters["query"] !== gtfsExampleQuery && parameters["query"] !== transmodelExampleQuery) {
 
       var newSearch =
               '?' +
@@ -116,9 +150,27 @@ query {
     }
   }
 
-  function graphQLFetcher(graphQLParams) {``
+  let apiFlavor = parameters.flavor || "gtfs";
+  let urls = {
+    gtfs: '/otp/gtfs/v1',
+    transmodel: '/otp/transmodel/v3'
+  }
+
+  let defaultQueries = {
+    gtfs: gtfsExampleQuery,
+    transmodel: transmodelExampleQuery
+  }
+
+  let updateFlavor = (e) => {
+    apiFlavor = e.target.value;
+    console.log(`Setting API flavor to '${apiFlavor}'`);
+    history.pushState(null, null, `?flavor=${apiFlavor}`);
+    window.location.reload();
+  };
+
+  function graphQLFetcher(graphQLParams) {
     return fetch(
-            '/otp/routers/default/index/graphql',
+            urls[apiFlavor],
             {
               method: 'post',
               headers: {
@@ -135,12 +187,16 @@ query {
     });
   }
 
-  const header = React.createElement("a", { className: "graphiql-logo-link" }, "OTP GraphQL Explorer");
-  ReactDOM.render(
-          React.createElement(GraphiQL, {
+  const header = React.createElement("a", { className: "graphiql-logo-link" }, "OTP GraphQL Explorer ");
+  const select = React.createElement("select", { onChange: updateFlavor, value: apiFlavor }, [
+          React.createElement("option", { key: "gtfs", value: "gtfs" }, "GTFS"),
+          React.createElement("option", { key: "transmodel", value: "transmodel" }, "Transmodel")
+  ]);
+
+  var graphiql = React.createElement(GraphiQL, {
             fetcher: graphQLFetcher,
             defaultVariableEditorOpen: true,
-            query: parameters.query || defaultQuery,
+            query: parameters.query || defaultQueries[apiFlavor],
             variables: parameters.variables,
             operationName: parameters.operationName,
             onEditQuery: onEditQuery,
@@ -148,10 +204,8 @@ query {
             onEditOperationName: onEditOperationName,
             defaultEditorToolsVisibility: true
           },
-                  React.createElement(GraphiQL.Logo, {}, header )
-          ),
-          document.getElementById('graphiql'),
-  );
+          React.createElement(GraphiQL.Logo, {}, [header, select]));
+  ReactDOM.render(graphiql, document.getElementById('graphiql'));
 </script>
 </body>
 </html>

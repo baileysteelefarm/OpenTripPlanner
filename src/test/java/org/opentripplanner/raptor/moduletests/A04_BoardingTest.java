@@ -17,6 +17,7 @@ import org.opentripplanner.raptor._data.transit.TestTransitData;
 import org.opentripplanner.raptor._data.transit.TestTripSchedule;
 import org.opentripplanner.raptor.api.request.RaptorRequestBuilder;
 import org.opentripplanner.raptor.configure.RaptorConfig;
+import org.opentripplanner.raptor.moduletests.support.ModuleTestDebugLogging;
 import org.opentripplanner.raptor.moduletests.support.RaptorModuleTestCase;
 
 /**
@@ -93,7 +94,7 @@ public class A04_BoardingTest implements RaptorTestConstants {
         "~ BUS L1_1 0:10 0:18 ~ B " +
         "~ BUS L2 0:20 0:31 ~ F " +
         "~ BUS L3_2 0:35 0:40 ~ H " +
-        "~ Walk 1m [0:09 0:41 32m 2tx]"
+        "~ Walk 1m [0:09 0:41 32m Tₓ2]"
       )
       // A reverse test on the standard profile is included to demonstrate
       // that the min-travel-duration and the standard give different results
@@ -106,7 +107,7 @@ public class A04_BoardingTest implements RaptorTestConstants {
         "~ BUS L1_2 0:14 0:18 ~ C " +
         "~ BUS L2 0:21 0:32 ~ G " +
         "~ BUS L3_3 0:35 0:44 ~ H " +
-        "~ Walk 1m [0:13 0:45 32m 2tx]"
+        "~ Walk 1m [0:13 0:45 32m Tₓ2]"
       )
       .add(
         multiCriteria(),
@@ -115,7 +116,7 @@ public class A04_BoardingTest implements RaptorTestConstants {
         "~ BUS L1_2 0:14 0:18 ~ C " +
         "~ BUS L2 0:21 0:31 ~ F " +
         "~ BUS L3_2 0:35 0:40 ~ H " +
-        "~ Walk 1m [0:13 0:41 28m 2tx $3600]"
+        "~ Walk 1m [0:13 0:41 28m Tₓ2 C₁3_600]"
       )
       .build();
   }

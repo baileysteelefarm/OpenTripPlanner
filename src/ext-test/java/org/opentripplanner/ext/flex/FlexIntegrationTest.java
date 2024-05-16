@@ -3,13 +3,11 @@ package org.opentripplanner.ext.flex;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.opentripplanner.graph_builder.module.FakeGraph.getFileForResource;
 import static org.opentripplanner.routing.api.request.StreetMode.FLEXIBLE;
 import static org.opentripplanner.street.search.TraverseMode.WALK;
 import static org.opentripplanner.transit.model.basic.TransitMode.BUS;
 
 import java.io.File;
-import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
@@ -25,7 +23,7 @@ import org.opentripplanner.TestServerContext;
 import org.opentripplanner.framework.application.OTPFeature;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.graph_builder.module.DirectTransferGenerator;
-import org.opentripplanner.graph_builder.module.StreetLinkerModule;
+import org.opentripplanner.graph_builder.module.TestStreetLinkerModule;
 import org.opentripplanner.gtfs.graphbuilder.GtfsBundle;
 import org.opentripplanner.gtfs.graphbuilder.GtfsModule;
 import org.opentripplanner.model.GenericLocation;
@@ -34,6 +32,7 @@ import org.opentripplanner.model.modes.ExcludeAllTransitFilter;
 import org.opentripplanner.model.plan.Itinerary;
 import org.opentripplanner.routing.api.RoutingService;
 import org.opentripplanner.routing.api.request.RouteRequest;
+import org.opentripplanner.routing.api.request.framework.TimeAndCostPenalty;
 import org.opentripplanner.routing.api.request.request.filter.AllowAllTransitFilter;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.transit.service.TransitModel;
@@ -43,6 +42,8 @@ import org.opentripplanner.transit.service.TransitModel;
  */
 public class FlexIntegrationTest {
 
+  public static final GenericLocation OUTSIDE_FLEX_ZONE = new GenericLocation(33.7552, -84.4631);
+  public static final GenericLocation INSIDE_FLEX_ZONE = new GenericLocation(33.8694, -84.6233);
   static Instant dateTime = ZonedDateTime
     .parse("2021-12-02T12:00:00-05:00[America/New_York]")
     .toInstant();
@@ -56,16 +57,15 @@ public class FlexIntegrationTest {
   @BeforeAll
   static void setup() {
     OTPFeature.enableFeatures(Map.of(OTPFeature.FlexRouting, true));
-    var osmPath = getAbsolutePath(FlexTest.COBB_OSM);
-    var cobblincGtfsPath = getAbsolutePath(FlexTest.COBB_BUS_30_GTFS);
-    var martaGtfsPath = getAbsolutePath(FlexTest.MARTA_BUS_856_GTFS);
-    var flexGtfsPath = getAbsolutePath(FlexTest.COBB_FLEX_GTFS);
-
-    TestOtpModel model = ConstantsForTests.buildOsmGraph(osmPath);
+    TestOtpModel model = ConstantsForTests.buildOsmGraph(FlexTest.COBB_OSM);
     graph = model.graph();
     transitModel = model.transitModel();
 
-    addGtfsToGraph(graph, transitModel, List.of(cobblincGtfsPath, martaGtfsPath, flexGtfsPath));
+    addGtfsToGraph(
+      graph,
+      transitModel,
+      List.of(FlexTest.COBB_BUS_30_GTFS, FlexTest.MARTA_BUS_856_GTFS, FlexTest.COBB_FLEX_GTFS)
+    );
     service = TestServerContext.createServerContext(graph, transitModel).routingService();
   }
 
@@ -76,10 +76,7 @@ public class FlexIntegrationTest {
 
   @Test
   void shouldReturnARouteTransferringFromBusToFlex() {
-    var from = new GenericLocation(33.7552, -84.4631);
-    var to = new GenericLocation(33.8694, -84.6233);
-
-    var itin = getItinerary(from, to, 4);
+    var itin = getItinerary(OUTSIDE_FLEX_ZONE, INSIDE_FLEX_ZONE, 4);
 
     assertEquals(4, itin.getLegs().size());
 
@@ -102,6 +99,8 @@ public class FlexIntegrationTest {
       flex.getFrom().name.toString()
     );
     assertEquals("Destination (part of Flex Zone 2)", flex.getTo().name.toString());
+    assertEquals("2021-12-02T14:30-05:00[America/New_York]", flex.getStartTime().toString());
+    assertEquals("2021-12-02T15:00-05:00[America/New_York]", flex.getEndTime().toString());
   }
 
   @Test
@@ -131,6 +130,8 @@ public class FlexIntegrationTest {
     assertEquals(BUS, finalFlex.getMode());
     assertEquals("Zone 2", finalFlex.getRoute().getShortName());
     assertTrue(finalFlex.isFlexibleTrip());
+    assertEquals("2021-12-02T15:00-05:00[America/New_York]", finalFlex.getStartTime().toString());
+    assertEquals("2021-12-02T15:30-05:00[America/New_York]", finalFlex.getEndTime().toString());
   }
 
   @Test
@@ -173,21 +174,9 @@ public class FlexIntegrationTest {
     OTPFeature.enableFeatures(Map.of(OTPFeature.FlexRouting, false));
   }
 
-  private static String getAbsolutePath(String cobbOsm) {
-    try {
-      return getFileForResource(cobbOsm).getAbsolutePath();
-    } catch (URISyntaxException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private static void addGtfsToGraph(
-    Graph graph,
-    TransitModel transitModel,
-    List<String> gtfsFiles
-  ) {
+  private static void addGtfsToGraph(Graph graph, TransitModel transitModel, List<File> gtfsFiles) {
     // GTFS
-    var gtfsBundles = gtfsFiles.stream().map(f -> new GtfsBundle(new File(f))).toList();
+    var gtfsBundles = gtfsFiles.stream().map(GtfsBundle::new).toList();
     GtfsModule gtfsModule = new GtfsModule(
       gtfsBundles,
       transitModel,
@@ -197,10 +186,10 @@ public class FlexIntegrationTest {
     gtfsModule.buildGraph();
 
     // link stations to streets
-    StreetLinkerModule.linkStreetsForTestOnly(graph, transitModel);
+    TestStreetLinkerModule.link(graph, transitModel);
 
     // link flex locations to streets
-    new FlexLocationsToStreetEdgesMapper(graph, transitModel).buildGraph();
+    new AreaStopsToVerticesMapper(graph, transitModel).buildGraph();
 
     // generate direct transfers
     var req = new RouteRequest();
@@ -236,6 +225,11 @@ public class FlexIntegrationTest {
     request.setTo(to);
     request.setNumItineraries(10);
     request.setSearchWindow(Duration.ofHours(2));
+    request.withPreferences(p ->
+      p.withStreet(s ->
+        s.withAccessEgress(ae -> ae.withPenalty(Map.of(FLEXIBLE, TimeAndCostPenalty.ZERO)))
+      )
+    );
 
     var modes = request.journey().modes().copyOf();
     modes.withEgressMode(FLEXIBLE);

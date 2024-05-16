@@ -2,7 +2,7 @@ package org.opentripplanner.raptor.spi;
 
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
-import org.opentripplanner.raptor.api.RaptorConstants;
+import org.opentripplanner.raptor.api.model.RaptorConstants;
 import org.opentripplanner.raptor.api.model.RaptorTransferConstraint;
 import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
 
@@ -77,7 +77,7 @@ public interface RaptorBoardOrAlightEvent<T extends RaptorTripSchedule> {
   /**
    * This is a helper method for the Raptor implementation to be able to board or execute
    * a alternativeBoardingFallback method depending on the event. This logic should ideally
-   * be put inside raptor, but due to performance(creating lambda instances, witch for some
+   * be put inside raptor, but due to performance(creating lambda instances, which for some
    * reason is not inlined) this need to be here.
    * <p>
    * @param boardCallback perform boarding if the event in none empty (or some other special

@@ -6,18 +6,28 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Collection;
+import java.util.List;
 import org.opentripplanner.framework.application.OTPFeature;
-import org.opentripplanner.raptor.api.RaptorConstants;
+import org.opentripplanner.raptor.api.model.GeneralizedCostRelaxFunction;
 import org.opentripplanner.raptor.api.model.RaptorAccessEgress;
+import org.opentripplanner.raptor.api.model.RaptorConstants;
+import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
+import org.opentripplanner.raptor.api.model.RelaxFunction;
+import org.opentripplanner.raptor.api.request.DebugRequestBuilder;
 import org.opentripplanner.raptor.api.request.Optimization;
+import org.opentripplanner.raptor.api.request.PassThroughPoint;
 import org.opentripplanner.raptor.api.request.RaptorRequest;
 import org.opentripplanner.raptor.api.request.RaptorRequestBuilder;
 import org.opentripplanner.raptor.rangeraptor.SystemErrDebugLogger;
 import org.opentripplanner.routing.algorithm.raptoradapter.router.performance.PerformanceTimersForRaptor;
-import org.opentripplanner.routing.algorithm.raptoradapter.transit.TripSchedule;
+import org.opentripplanner.routing.algorithm.raptoradapter.transit.cost.RaptorCostConverter;
+import org.opentripplanner.routing.algorithm.raptoradapter.transit.cost.grouppriority.TransitGroupPriority32n;
+import org.opentripplanner.routing.api.request.DebugEventType;
 import org.opentripplanner.routing.api.request.RouteRequest;
+import org.opentripplanner.routing.api.request.framework.CostLinearFunction;
+import org.opentripplanner.transit.model.site.StopLocation;
 
-public class RaptorRequestMapper {
+public class RaptorRequestMapper<T extends RaptorTripSchedule> {
 
   private final RouteRequest request;
   private final Collection<? extends RaptorAccessEgress> accessPaths;
@@ -42,7 +52,7 @@ public class RaptorRequestMapper {
     this.meterRegistry = meterRegistry;
   }
 
-  public static RaptorRequest<TripSchedule> mapRequest(
+  public static <T extends RaptorTripSchedule> RaptorRequest<T> mapRequest(
     RouteRequest request,
     ZonedDateTime transitSearchTimeZero,
     boolean isMultiThreaded,
@@ -50,7 +60,7 @@ public class RaptorRequestMapper {
     Collection<? extends RaptorAccessEgress> egressPaths,
     MeterRegistry meterRegistry
   ) {
-    return new RaptorRequestMapper(
+    return new RaptorRequestMapper<T>(
       request,
       isMultiThreaded,
       accessPaths,
@@ -61,8 +71,8 @@ public class RaptorRequestMapper {
       .doMap();
   }
 
-  private RaptorRequest<TripSchedule> doMap() {
-    var builder = new RaptorRequestBuilder<TripSchedule>();
+  private RaptorRequest<T> doMap() {
+    var builder = new RaptorRequestBuilder<T>();
     var searchParams = builder.searchParams();
 
     var preferences = request.preferences();
@@ -83,13 +93,13 @@ public class RaptorRequestMapper {
     } else {
       var c = request.pageCursor();
 
-      if (c.earliestDepartureTime != null) {
-        searchParams.earliestDepartureTime(relativeTime(c.earliestDepartureTime));
+      if (c.earliestDepartureTime() != null) {
+        searchParams.earliestDepartureTime(relativeTime(c.earliestDepartureTime()));
       }
-      if (c.latestArrivalTime != null) {
-        searchParams.latestArrivalTime(relativeTime(c.latestArrivalTime));
+      if (c.latestArrivalTime() != null) {
+        searchParams.latestArrivalTime(relativeTime(c.latestArrivalTime()));
       }
-      searchParams.searchWindow(c.searchWindow);
+      searchParams.searchWindow(c.searchWindow());
     }
 
     if (preferences.transfer().maxTransfers() != null) {
@@ -99,12 +109,19 @@ public class RaptorRequestMapper {
     if (preferences.transfer().maxAdditionalTransfers() != null) {
       searchParams.numberOfAdditionalTransfers(preferences.transfer().maxAdditionalTransfers());
     }
+
     builder.withMultiCriteria(mcBuilder -> {
-      preferences
-        .transit()
-        .raptor()
-        .relaxGeneralizedCostAtDestination()
-        .ifPresent(mcBuilder::withRelaxCostAtDestination);
+      var pt = preferences.transit();
+      var r = pt.raptor();
+
+      // Note! If a pass-through-point exists, then the transit-group-priority feature is disabled
+      if (!request.getPassThroughPoints().isEmpty()) {
+        mcBuilder.withPassThroughPoints(mapPassThroughPoints());
+        r.relaxGeneralizedCostAtDestination().ifPresent(mcBuilder::withRelaxCostAtDestination);
+      } else if (!pt.relaxTransitGroupPriority().isNormal()) {
+        mcBuilder.withTransitPriorityCalculator(TransitGroupPriority32n.priorityCalculator());
+        mcBuilder.withRelaxC1(mapRelaxCost(pt.relaxTransitGroupPriority()));
+      }
     });
 
     for (Optimization optimization : preferences.transit().raptor().optimizations()) {
@@ -137,10 +154,11 @@ public class RaptorRequestMapper {
         .addStops(raptorDebugging.stops())
         .setPath(raptorDebugging.path())
         .debugPathFromStopIndex(raptorDebugging.debugPathFromStopIndex())
-        .stopArrivalListener(debugLogger::stopArrivalLister)
-        .patternRideDebugListener(debugLogger::patternRideLister)
-        .pathFilteringListener(debugLogger::pathFilteringListener)
         .logger(debugLogger);
+
+      for (var type : raptorDebugging.eventTypes()) {
+        addLogListenerForEachEventTypeRequested(debug, type, debugLogger);
+      }
     }
 
     if (!request.timetableView() && request.arriveBy()) {
@@ -148,15 +166,38 @@ public class RaptorRequestMapper {
     }
 
     // Add this last, it depends on generating an alias from the set values
-    builder.performanceTimers(
-      new PerformanceTimersForRaptor(
-        builder.generateAlias(),
-        preferences.system().tags(),
-        meterRegistry
-      )
-    );
+    if (meterRegistry != null) {
+      builder.performanceTimers(
+        new PerformanceTimersForRaptor(
+          builder.generateAlias(),
+          preferences.system().tags(),
+          meterRegistry
+        )
+      );
+    }
 
     return builder.build();
+  }
+
+  private List<PassThroughPoint> mapPassThroughPoints() {
+    return request
+      .getPassThroughPoints()
+      .stream()
+      .map(p -> {
+        final int[] stops = p.stopLocations().stream().mapToInt(StopLocation::getIndex).toArray();
+        return new PassThroughPoint(p.name(), stops);
+      })
+      .toList();
+  }
+
+  static RelaxFunction mapRelaxCost(CostLinearFunction relax) {
+    if (relax == null) {
+      return null;
+    }
+    return GeneralizedCostRelaxFunction.of(
+      relax.coefficient(),
+      RaptorCostConverter.toRaptorCost(relax.constant().toSeconds())
+    );
   }
 
   private int relativeTime(Instant time) {
@@ -164,5 +205,17 @@ public class RaptorRequestMapper {
       return RaptorConstants.TIME_NOT_SET;
     }
     return (int) (time.getEpochSecond() - transitSearchTimeZeroEpocSecond);
+  }
+
+  private static void addLogListenerForEachEventTypeRequested(
+    DebugRequestBuilder target,
+    DebugEventType type,
+    SystemErrDebugLogger logger
+  ) {
+    switch (type) {
+      case STOP_ARRIVALS -> target.stopArrivalListener(logger::stopArrivalLister);
+      case PATTERN_RIDES -> target.patternRideDebugListener(logger::patternRideLister);
+      case DESTINATION_ARRIVALS -> target.pathFilteringListener(logger::pathFilteringListener);
+    }
   }
 }

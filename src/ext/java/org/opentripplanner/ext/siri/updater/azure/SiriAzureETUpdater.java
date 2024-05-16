@@ -2,11 +2,7 @@ package org.opentripplanner.ext.siri.updater.azure;
 
 import com.azure.messaging.servicebus.ServiceBusErrorContext;
 import com.azure.messaging.servicebus.ServiceBusReceivedMessageContext;
-import com.google.common.io.CharStreams;
 import jakarta.xml.bind.JAXBException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
@@ -19,12 +15,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import javax.xml.stream.XMLStreamException;
-import org.apache.http.client.utils.URIBuilder;
+import org.apache.hc.core5.net.URIBuilder;
 import org.opentripplanner.ext.siri.SiriTimetableSnapshotSource;
-import org.opentripplanner.framework.io.HttpUtils;
 import org.opentripplanner.framework.time.DurationUtils;
 import org.opentripplanner.transit.service.TransitModel;
-import org.opentripplanner.updater.spi.HttpHeaders;
+import org.opentripplanner.updater.spi.ResultLogger;
 import org.opentripplanner.updater.spi.UpdateResult;
 import org.opentripplanner.updater.trip.metrics.TripUpdateMetrics;
 import org.rutebanken.siri20.util.SiriXml;
@@ -62,7 +57,7 @@ public class SiriAzureETUpdater extends AbstractAzureSiriUpdater {
     MESSAGE_COUNTER.incrementAndGet();
 
     if (MESSAGE_COUNTER.get() % 100 == 0) {
-      LOG.info("Total SIRI-ET messages received={}", MESSAGE_COUNTER.get());
+      LOG.debug("Total SIRI-ET messages received={}", MESSAGE_COUNTER.get());
     }
 
     processMessage(message.getBody().toString(), message.getMessageId());
@@ -75,7 +70,7 @@ public class SiriAzureETUpdater extends AbstractAzureSiriUpdater {
 
   @Override
   protected void initializeData(String url, Consumer<ServiceBusReceivedMessageContext> consumer)
-    throws IOException, URISyntaxException {
+    throws URISyntaxException {
     if (url == null) {
       LOG.info("No history url set up for Siri Azure ET Updater");
       return;
@@ -88,20 +83,9 @@ public class SiriAzureETUpdater extends AbstractAzureSiriUpdater {
     while (!isPrimed()) {
       startTime = Instant.now();
       LOG.info("Fetching initial Siri ET data from {}, timeout is {}ms", uri, timeout);
-
-      // Maybe put this in the config?
-      HttpHeaders rh = HttpHeaders.of().acceptApplicationXML().build();
-
       final long t1 = System.currentTimeMillis();
-      final InputStream data = HttpUtils.getData(uri, Duration.ofMillis(timeout), rh.asMap());
+      String string = fetchInitialData(uri);
       final long t2 = System.currentTimeMillis();
-
-      if (data == null) {
-        throw new IOException("Historical endpoint returned no data from url" + url);
-      }
-
-      var reader = new InputStreamReader(data);
-      var string = CharStreams.toString(reader);
 
       LOG.info(
         "Fetching initial data - finished after {} ms, got {} bytes",
@@ -123,13 +107,15 @@ public class SiriAzureETUpdater extends AbstractAzureSiriUpdater {
       }
 
       super.saveResultOnGraph.execute((graph, transitModel) -> {
-        snapshotSource.applyEstimatedTimetable(
+        var result = snapshotSource.applyEstimatedTimetable(
           fuzzyTripMatcher(),
           entityResolver(),
           feedId,
           false,
           updates
         );
+        ResultLogger.logUpdateResultErrors(feedId, "siri-et", result);
+        recordMetrics.accept(result);
       });
     } catch (JAXBException | XMLStreamException e) {
       LOG.error(e.getLocalizedMessage(), e);
@@ -155,6 +141,7 @@ public class SiriAzureETUpdater extends AbstractAzureSiriUpdater {
             false,
             updates
           );
+          ResultLogger.logUpdateResultErrors(feedId, "siri-et", result);
           recordMetrics.accept(result);
 
           setPrimed(true);
@@ -182,7 +169,7 @@ public class SiriAzureETUpdater extends AbstractAzureSiriUpdater {
       siri.getServiceDelivery().getEstimatedTimetableDeliveries().isEmpty()
     ) {
       if (siri.getHeartbeatNotification() != null) {
-        LOG.info("Received SIRI heartbeat message");
+        LOG.debug("Received SIRI heartbeat message");
       } else {
         LOG.warn("Empty Siri message {}: {}", id, message);
       }

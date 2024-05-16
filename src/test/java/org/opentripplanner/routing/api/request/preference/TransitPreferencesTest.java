@@ -9,9 +9,9 @@ import static org.opentripplanner.routing.api.request.preference.ImmutablePrefer
 import java.time.Duration;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.opentripplanner.framework.model.Cost;
 import org.opentripplanner.raptor.api.model.SearchDirection;
-import org.opentripplanner.routing.api.request.framework.DoubleAlgorithmFunction;
-import org.opentripplanner.routing.api.request.framework.RequestFunctions;
+import org.opentripplanner.routing.api.request.framework.CostLinearFunction;
 import org.opentripplanner.transit.model.basic.TransitMode;
 
 class TransitPreferencesTest {
@@ -21,14 +21,16 @@ class TransitPreferencesTest {
     TransitMode.AIRPLANE,
     2.1
   );
-  private static final DoubleAlgorithmFunction UNPREFERRED_COST = RequestFunctions.parse(
-    "300 + 1.15 x"
-  );
+  private static final CostLinearFunction UNPREFERRED_COST = CostLinearFunction.of("5m + 1.15 x");
   private static final Duration D15s = Duration.ofSeconds(15);
   private static final Duration D45s = Duration.ofSeconds(45);
   private static final Duration D25m = Duration.ofMinutes(25);
   private static final Duration D35m = Duration.ofMinutes(35);
   private static final SearchDirection RAPTOR_SEARCH_DIRECTION = SearchDirection.REVERSE;
+  private static final CostLinearFunction TRANSIT_GROUP_PRIORITY_RELAX = CostLinearFunction.of(
+    Cost.costOfSeconds(300),
+    1.5
+  );
   private static final boolean IGNORE_REALTIME_UPDATES = true;
   private static final boolean INCLUDE_PLANNED_CANCELLATIONS = true;
   private static final boolean INCLUDE_REALTIME_CANCELLATIONS = true;
@@ -40,6 +42,7 @@ class TransitPreferencesTest {
     .setUnpreferredCost(UNPREFERRED_COST)
     .withBoardSlack(b -> b.withDefault(D45s).with(TransitMode.AIRPLANE, D35m))
     .withAlightSlack(b -> b.withDefault(D15s).with(TransitMode.AIRPLANE, D25m))
+    .withRelaxTransitGroupPriority(TRANSIT_GROUP_PRIORITY_RELAX)
     .setIgnoreRealtimeUpdates(IGNORE_REALTIME_UPDATES)
     .setIncludePlannedCancellations(INCLUDE_PLANNED_CANCELLATIONS)
     .setIncludeRealtimeCancellations(INCLUDE_REALTIME_CANCELLATIONS)
@@ -74,6 +77,11 @@ class TransitPreferencesTest {
   }
 
   @Test
+  void relaxTransitGroupPriority() {
+    assertEquals(TRANSIT_GROUP_PRIORITY_RELAX, subject.relaxTransitGroupPriority());
+  }
+
+  @Test
   void ignoreRealtimeUpdates() {
     assertFalse(TransitPreferences.DEFAULT.ignoreRealtimeUpdates());
     assertTrue(subject.ignoreRealtimeUpdates());
@@ -105,7 +113,7 @@ class TransitPreferencesTest {
     // Create a copy, make a change and set it back again to force creating a new object
     var other = subject.copyOf().setIgnoreRealtimeUpdates(!IGNORE_REALTIME_UPDATES).build();
     var copy = other.copyOf().setIgnoreRealtimeUpdates(IGNORE_REALTIME_UPDATES).build();
-    assertEqualsAndHashCode(StreetPreferences.DEFAULT, subject, other, copy);
+    assertEqualsAndHashCode(subject, other, copy);
   }
 
   @Test
@@ -115,8 +123,9 @@ class TransitPreferencesTest {
       "boardSlack: DurationForTransitMode{default:45s, AIRPLANE:35m}, " +
       "alightSlack: DurationForTransitMode{default:15s, AIRPLANE:25m}, " +
       "reluctanceForMode: {AIRPLANE=2.1}, " +
-      "otherThanPreferredRoutesPenalty: 350, " +
-      "unpreferredCost: f(x) = 300 + 1.15 x, " +
+      "otherThanPreferredRoutesPenalty: $350, " +
+      "unpreferredCost: 5m + 1.15 t, " +
+      "relaxTransitGroupPriority: 5m + 1.50 t, " +
       "ignoreRealtimeUpdates, " +
       "includePlannedCancellations, " +
       "includeRealtimeCancellations, " +

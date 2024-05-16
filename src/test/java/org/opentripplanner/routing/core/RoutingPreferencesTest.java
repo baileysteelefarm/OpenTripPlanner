@@ -11,18 +11,19 @@ public class RoutingPreferencesTest {
   @Test
   public void copyOfShouldReturnTheSameInstanceWhenBuild() {
     var pref = new RoutingPreferences();
-    var copy = pref.copyOf().build();
-    assertNotSame(pref, copy);
+    var same = pref.copyOf().build();
+    assertSame(pref, same);
+    // Change one thing to force making a copy
+    var copy = pref.copyOf().withCar(c -> c.withReluctance(3.5)).build();
+    assertNotSame(pref.car(), copy.car());
 
     // Immutable classes should not change
-    assertSame(pref.car(), copy.car());
     assertSame(pref.bike(), copy.bike());
     assertSame(pref.walk(), copy.walk());
     assertSame(pref.transfer(), copy.transfer());
     assertSame(pref.wheelchair(), copy.wheelchair());
     assertSame(pref.transit(), copy.transit());
     assertSame(pref.street(), copy.street());
-    assertSame(pref.rental(), copy.rental());
     assertSame(pref.itineraryFilter(), copy.itineraryFilter());
     assertSame(pref.system(), copy.system());
   }
@@ -44,6 +45,16 @@ public class RoutingPreferencesTest {
 
     assertNotSame(pref, copy);
     assertNotSame(pref.bike(), copy.bike());
+    assertSame(pref.walk(), copy.walk());
+  }
+
+  @Test
+  public void copyOfWithScooterChanges() {
+    var pref = new RoutingPreferences();
+    var copy = pref.copyOf().withScooter(b -> b.withReluctance(2.5)).build();
+
+    assertNotSame(pref, copy);
+    assertNotSame(pref.scooter(), copy.scooter());
     assertSame(pref.walk(), copy.walk());
   }
 
@@ -106,16 +117,6 @@ public class RoutingPreferencesTest {
 
     assertNotSame(pref, copy);
     assertNotSame(pref.street(), copy.street());
-  }
-
-  @Test
-  public void copyOfWithRentalChanges() {
-    var pref = new RoutingPreferences();
-    var copy = pref.copyOf().withRental(r -> r.withDropoffCost(2)).build();
-
-    assertNotSame(pref, copy);
-    assertNotSame(pref.rental(), copy.rental());
-    assertSame(pref.itineraryFilter(), copy.itineraryFilter());
   }
 
   @Test

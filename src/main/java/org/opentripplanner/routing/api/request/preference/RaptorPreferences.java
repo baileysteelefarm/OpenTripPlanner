@@ -10,11 +10,11 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
+import org.opentripplanner.framework.model.Units;
 import org.opentripplanner.framework.tostring.ToStringBuilder;
 import org.opentripplanner.raptor.api.model.SearchDirection;
 import org.opentripplanner.raptor.api.request.Optimization;
 import org.opentripplanner.raptor.api.request.RaptorProfile;
-import org.opentripplanner.routing.api.request.framework.Units;
 
 /**
  * Set of optimizations to use with Raptor. These are available here for testing purposes.
@@ -34,7 +34,6 @@ public final class RaptorPreferences implements Serializable {
   private final SearchDirection searchDirection;
 
   private final Instant timeLimit;
-
   private final Double relaxGeneralizedCostAtDestination;
 
   private RaptorPreferences() {
@@ -50,7 +49,6 @@ public final class RaptorPreferences implements Serializable {
     this.profile = Objects.requireNonNull(builder.profile);
     this.searchDirection = Objects.requireNonNull(builder.searchDirection);
     this.timeLimit = builder.timeLimit;
-
     this.relaxGeneralizedCostAtDestination =
       Units.normalizedOptionalFactor(
         builder.relaxGeneralizedCostAtDestination,
@@ -91,6 +89,7 @@ public final class RaptorPreferences implements Serializable {
   /**
    * See {@link SearchParams#relaxCostAtDestination()} for documentation.
    */
+  @Deprecated
   public Optional<Double> relaxGeneralizedCostAtDestination() {
     return Optional.ofNullable(relaxGeneralizedCostAtDestination);
   }

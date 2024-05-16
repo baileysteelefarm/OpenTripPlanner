@@ -2,9 +2,9 @@ package org.opentripplanner.raptor.rangeraptor.multicriteria.arrivals.c1;
 
 import static org.opentripplanner.raptor.api.model.PathLegType.ACCESS;
 
-import org.opentripplanner.raptor.api.RaptorConstants;
 import org.opentripplanner.raptor.api.model.PathLegType;
 import org.opentripplanner.raptor.api.model.RaptorAccessEgress;
+import org.opentripplanner.raptor.api.model.RaptorConstants;
 import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
 import org.opentripplanner.raptor.api.view.AccessPathView;
 import org.opentripplanner.raptor.rangeraptor.multicriteria.arrivals.McStopArrival;
@@ -23,7 +23,7 @@ final class AccessStopArrival<T extends RaptorTripSchedule> extends McStopArriva
       access.stop(),
       departureTime,
       access.durationInSeconds(),
-      access.generalizedCost(),
+      access.c1(),
       access.numberOfRides()
     );
     this.access = access;
@@ -31,7 +31,7 @@ final class AccessStopArrival<T extends RaptorTripSchedule> extends McStopArriva
 
   @Override
   public int c2() {
-    throw new UnsupportedOperationException("C2 is not available for the C1 implementation");
+    return RaptorConstants.NOT_SET;
   }
 
   @Override

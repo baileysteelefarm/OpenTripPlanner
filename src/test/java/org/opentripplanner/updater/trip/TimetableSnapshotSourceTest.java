@@ -2,7 +2,6 @@ package org.opentripplanner.updater.trip;
 
 import static com.google.transit.realtime.GtfsRealtime.TripDescriptor.ScheduleRelationship.ADDED;
 import static com.google.transit.realtime.GtfsRealtime.TripDescriptor.ScheduleRelationship.SCHEDULED;
-import static com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeUpdate.ScheduleRelationship.NO_DATA;
 import static com.google.transit.realtime.GtfsRealtime.TripUpdate.StopTimeUpdate.ScheduleRelationship.SKIPPED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -11,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.opentripplanner.model.UpdateError.UpdateErrorType.NO_SERVICE_ON_DATE;
+import static org.opentripplanner.updater.spi.UpdateError.UpdateErrorType.NO_SERVICE_ON_DATE;
 import static org.opentripplanner.updater.trip.BackwardsDelayPropagationType.REQUIRED_NO_DATA;
 import static org.opentripplanner.updater.trip.TimetableSnapshotSourceTest.SameAssert.NotSame;
 import static org.opentripplanner.updater.trip.TimetableSnapshotSourceTest.SameAssert.Same;
@@ -34,6 +33,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.opentripplanner.ConstantsForTests;
 import org.opentripplanner.TestOtpModel;
 import org.opentripplanner.framework.i18n.NonLocalizedString;
@@ -41,8 +41,6 @@ import org.opentripplanner.framework.time.ServiceDateUtils;
 import org.opentripplanner.model.PickDrop;
 import org.opentripplanner.model.Timetable;
 import org.opentripplanner.model.TimetableSnapshot;
-import org.opentripplanner.model.UpdateSuccess.WarningType;
-import org.opentripplanner.test.support.VariableSource;
 import org.opentripplanner.transit.model.basic.TransitMode;
 import org.opentripplanner.transit.model.framework.FeedScopedId;
 import org.opentripplanner.transit.model.network.TripPattern;
@@ -52,6 +50,7 @@ import org.opentripplanner.transit.model.timetable.TripTimes;
 import org.opentripplanner.transit.service.TransitModel;
 import org.opentripplanner.updater.GtfsRealtimeFuzzyTripMatcher;
 import org.opentripplanner.updater.TimetableSnapshotSourceParameters;
+import org.opentripplanner.updater.spi.UpdateSuccess.WarningType;
 
 public class TimetableSnapshotSourceTest {
 
@@ -66,7 +65,7 @@ public class TimetableSnapshotSourceTest {
 
   @BeforeEach
   public void setUp() {
-    TestOtpModel model = ConstantsForTests.buildGtfsGraph(ConstantsForTests.FAKE_GTFS);
+    TestOtpModel model = ConstantsForTests.buildGtfsGraph(ConstantsForTests.SIMPLE_GTFS);
     transitModel = model.transitModel();
 
     feedId = transitModel.getFeedIds().stream().findFirst().get();
@@ -630,9 +629,9 @@ public class TimetableSnapshotSourceTest {
         SCHEDULED,
         transitModel.getTimeZone()
       )
-        .addStopTime(1, NO_DATA)
-        .addStopTime(2, SKIPPED)
-        .addStopTime(3, NO_DATA);
+        .addNoDataStop(1)
+        .addSkippedStop(2)
+        .addNoDataStop(3);
 
       var tripUpdate = builder.build();
 
@@ -762,7 +761,7 @@ public class TimetableSnapshotSourceTest {
         transitModel.getTimeZone()
       )
         .addDelayedStopTime(1, 0)
-        .addStopTime(2, SKIPPED)
+        .addSkippedStop(2)
         .addDelayedStopTime(3, 90);
 
       var tripUpdate = builder.build();
@@ -841,8 +840,8 @@ public class TimetableSnapshotSourceTest {
 
         assertEquals(0, newTripTimes.getArrivalDelay(0));
         assertEquals(0, newTripTimes.getDepartureDelay(0));
-        assertEquals(0, newTripTimes.getArrivalDelay(1));
-        assertEquals(0, newTripTimes.getDepartureDelay(1));
+        assertEquals(45, newTripTimes.getArrivalDelay(1));
+        assertEquals(45, newTripTimes.getDepartureDelay(1));
         assertEquals(90, newTripTimes.getArrivalDelay(2));
         assertEquals(90, newTripTimes.getDepartureDelay(2));
         assertFalse(newTripTimes.isCancelledStop(0));
@@ -1091,16 +1090,18 @@ public class TimetableSnapshotSourceTest {
     }
   }
 
-  static Stream<Arguments> purgeExpiredDataTestCases = Stream.of(
-    // purgeExpiredData   maxSnapshotFrequency || snapshots PatternSnapshotA  PatternSnapshotB
-    Arguments.of(Boolean.TRUE, -1, NotSame, NotSame),
-    Arguments.of(Boolean.FALSE, -1, NotSame, Same),
-    Arguments.of(Boolean.TRUE, 1000, NotSame, NotSame),
-    Arguments.of(Boolean.FALSE, 1000, Same, Same)
-  );
+  static Stream<Arguments> purgeExpiredDataTestCases() {
+    return Stream.of(
+      // purgeExpiredData   maxSnapshotFrequency || snapshots PatternSnapshotA  PatternSnapshotB
+      Arguments.of(Boolean.TRUE, -1, NotSame, NotSame),
+      Arguments.of(Boolean.FALSE, -1, NotSame, Same),
+      Arguments.of(Boolean.TRUE, 1000, NotSame, NotSame),
+      Arguments.of(Boolean.FALSE, 1000, Same, Same)
+    );
+  }
 
   @ParameterizedTest(name = "purgeExpired: {0}, maxFrequency: {1}  ||  {2}  {3}")
-  @VariableSource("purgeExpiredDataTestCases")
+  @MethodSource("purgeExpiredDataTestCases")
   public void testPurgeExpiredData(
     boolean purgeExpiredData,
     int maxSnapshotFrequency,

@@ -19,6 +19,7 @@ import org.opentripplanner.raptor._data.transit.TestTransitData;
 import org.opentripplanner.raptor._data.transit.TestTripSchedule;
 import org.opentripplanner.raptor.api.request.RaptorRequestBuilder;
 import org.opentripplanner.raptor.configure.RaptorConfig;
+import org.opentripplanner.raptor.moduletests.support.ModuleTestDebugLogging;
 import org.opentripplanner.raptor.moduletests.support.RaptorModuleTestCase;
 import org.opentripplanner.raptor.spi.DefaultSlackProvider;
 
@@ -77,7 +78,7 @@ public class C01_TransferBoardAndAlightSlackTest implements RaptorTestConstants 
       "~ BUS R1 0:02:11 0:03:01 ~ C " +
       "~ BUS R2 0:04:41 0:05:01 ~ D " +
       "~ Walk 20s " +
-      "[0:01:11 0:05:31 4m20s 1tx $1510]";
+      "[0:01:11 0:05:31 4m20s Tₓ1 C₁1_510]";
 
     return RaptorModuleTestCase
       .of()

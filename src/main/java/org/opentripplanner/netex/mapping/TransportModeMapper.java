@@ -6,7 +6,7 @@ import org.rutebanken.netex.model.AllVehicleModesOfTransportEnumeration;
 import org.rutebanken.netex.model.TransportSubmodeStructure;
 
 /**
- * This is a best effort at mapping the NeTEx transport modes to the OTP route codes which are
+ * This is a best-effort at mapping the NeTEx transport modes to the OTP route codes which are
  * identical to the
  * <a href="https://developers.google.com/transit/gtfs/reference/extended-route-types">GTFS extended
  * route types</a>
@@ -24,19 +24,20 @@ class TransportModeMapper {
     }
   }
 
-  private TransitMode mapAllVehicleModesOfTransport(AllVehicleModesOfTransportEnumeration mode)
+  public TransitMode mapAllVehicleModesOfTransport(AllVehicleModesOfTransportEnumeration mode)
     throws UnsupportedModeException {
     if (mode == null) {
       throw new UnsupportedModeException(null);
     }
     return switch (mode) {
       case AIR -> TransitMode.AIRPLANE;
-      case BUS, TAXI -> TransitMode.BUS;
+      case BUS -> TransitMode.BUS;
       case CABLEWAY -> TransitMode.CABLE_CAR;
       case COACH -> TransitMode.COACH;
       case FUNICULAR -> TransitMode.FUNICULAR;
       case METRO -> TransitMode.SUBWAY;
       case RAIL -> TransitMode.RAIL;
+      case TAXI -> TransitMode.TAXI;
       case TRAM -> TransitMode.TRAM;
       case WATER -> TransitMode.FERRY;
       default -> throw new UnsupportedModeException(mode);
@@ -62,6 +63,8 @@ class TransportModeMapper {
       return new NetexMainAndSubMode(TransitMode.TRAM, submode.getTramSubmode().value());
     } else if (submode.getWaterSubmode() != null) {
       return new NetexMainAndSubMode(TransitMode.FERRY, submode.getWaterSubmode().value());
+    } else if (submode.getTaxiSubmode() != null) {
+      return new NetexMainAndSubMode(TransitMode.TAXI, submode.getTaxiSubmode().value());
     }
     throw new IllegalArgumentException();
   }

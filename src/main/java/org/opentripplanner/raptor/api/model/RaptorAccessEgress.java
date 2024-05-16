@@ -1,7 +1,11 @@
 package org.opentripplanner.raptor.api.model;
 
+import static org.opentripplanner.raptor.api.model.RaptorConstants.TIME_NOT_SET;
+
+import java.time.temporal.ChronoUnit;
 import javax.annotation.Nullable;
 import org.opentripplanner.framework.time.DurationUtils;
+import org.opentripplanner.framework.time.TimeUtils;
 
 /**
  * Encapsulate information about an access or egress path. We do not distinguish between
@@ -27,10 +31,9 @@ public interface RaptorAccessEgress {
    * This method is called many times, so care needs to be taken that the value is stored, not
    * calculated for each invocation.
    * <p>
-   * If this is {@link #isFree()}, then this method must return
-   * {@link org.opentripplanner.raptor.api.RaptorConstants#ZERO_COST}.
+   * If this is {@link #isFree()}, then this method must return 0(zero).
    */
-  int generalizedCost();
+  int c1();
 
   /**
    * The time duration to walk or travel the path in seconds. This is not the entire duration from
@@ -42,6 +45,39 @@ public interface RaptorAccessEgress {
    */
   int durationInSeconds();
 
+  /**
+   * Raptor can add an optional time-penalty to a access/egress to make it less favourable compared
+   * with other access/egress/transit options (paths). The penalty is a virtual extra duration of
+   * time added inside Raptor when comparing time. The penalty does not propagate the c1 or c2 cost
+   * values. This feature is useful when you want to limit the access/egress and the access/egress
+   * is FASTER than the preferred option.
+   * <p>
+   * For example, for Park&Ride, driving all the way to the
+   * destination is very often the best option when looking at the time criteria. When an
+   * increasing time-penalty is applied to a car access/egress, then driving become less
+   * favorable. This also improves performance, since we usually add a very high cost to
+   * driving - making all park&ride access legs optimal - forcing Raptor to compute a path for
+   * every option. The short drives are optimal on cost, and the long are optimal on time. In the
+   * case of park&ride the time-penalty enables Raptor to choose one of the shortest access/egress
+   * paths over the longer ones.
+   * <p>
+   * Another example is FLEX, where we in many use-cases want regular transit to win if there is
+   * an offer. Only in the case where the FLEX is the only solution we want it to be presented.
+   * To achieve this, we must add an extra duration to the time of the FLEX access/egress - it does
+   * not help to just add extra cost - which makes both FLEX optimal on time and transit optimal on
+   * cost. Keeping a large number of optimal access paths has a negative impact on performance as well.
+   * <p>
+   *
+   * The unit is seconds and the default value is {@link RaptorConstants#TIME_NOT_SET}.
+   */
+  default int timePenalty() {
+    return RaptorConstants.TIME_NOT_SET;
+  }
+
+  default boolean hasTimePenalty() {
+    return timePenalty() != RaptorConstants.TIME_NOT_SET;
+  }
+
   /* TIME-DEPENDENT ACCESS/TRANSFER/EGRESS */
   // The methods below should be only overridden when an RaptorAccessEgress is only available at
   // specific times, such as flexible transit, TNC or shared vehicle schemes with limited opening
@@ -52,38 +88,50 @@ public interface RaptorAccessEgress {
    * when the access path can't start immediately, but have to wait for a vehicle arriving. Also DRT
    * systems or bike shares can have operation time limitations.
    * <p>
-   * Returns {@link org.opentripplanner.raptor.api.RaptorConstants#TIME_NOT_SET} if transfer
+   * Returns {@link RaptorConstants#TIME_NOT_SET} if transfer
    * is not possible after the requested departure time.
    */
-  default int earliestDepartureTime(int requestedDepartureTime) {
-    return requestedDepartureTime;
-  }
+  int earliestDepartureTime(int requestedDepartureTime);
 
   /**
-   * Returns the latest possible arrival time for the path. Used in DRT systems or bike shares where
-   * they can have operation time limitations.
+   * Returns the latest possible arrival time for the path. Used in DRT systems or bike shares
+   * where they can have operation time limitations.
    * <p>
-   * Returns {@link org.opentripplanner.raptor.api.RaptorConstants#TIME_NOT_SET} if transfer
+   * Returns {@link RaptorConstants#TIME_NOT_SET} if transfer
    * is not possible before the requested arrival time.
    */
-  default int latestArrivalTime(int requestedArrivalTime) {
-    return requestedArrivalTime;
-  }
+  int latestArrivalTime(int requestedArrivalTime);
 
   /**
-   * This method should return {@code true} if, and only if the instance have restricted
+   * This method should return {@code true} if, and only if the instance has restricted
    * opening-hours.
    */
   boolean hasOpeningHours();
 
   /**
-   * Return the opening hours in a short human-readable way. Do not parse this, this should
-   * only be used for things like debugging and logging.
+   * Return the opening hours in a short human-readable way for the departure at the origin. Do
+   * not parse this. This should only be used for things like testing, debugging and logging.
    * <p>
-   * This method return {@code null} if there is no opening hours, see {@link #hasOpeningHours()}.
+   * This method return {@code null} if there are no opening hours, see {@link #hasOpeningHours()}.
    */
   @Nullable
-  String openingHoursToString();
+  default String openingHoursToString() {
+    if (!hasOpeningHours()) {
+      return null;
+    }
+    // The earliest-departure-time(after 00:00) and latest-arrival-time(before edt+1d). This
+    // assumes the access/egress is a continuous period without gaps withing 24 hours from the
+    // opening. We ignore the access/egress duration. This is ok for test, debugging and logging.
+    int edt = earliestDepartureTime(0);
+    int lat = latestArrivalTime(edt + (int) ChronoUnit.DAYS.getDuration().toSeconds());
+
+    if (edt == TIME_NOT_SET || lat == TIME_NOT_SET) {
+      return "closed";
+    }
+    // Opening hours are specified for the departure, not arrival
+    int ldt = lat - durationInSeconds();
+    return "Open(" + TimeUtils.timeToStrCompact(edt) + " " + TimeUtils.timeToStrCompact(ldt) + ")";
+  }
 
   /*
        ACCESS/TRANSFER/EGRESS PATH CONTAINING MULTIPLE LEGS
@@ -167,8 +215,13 @@ public interface RaptorAccessEgress {
     return durationInSeconds() == 0;
   }
 
-  /** Call this from toString */
-  default String asString(boolean includeStop) {
+  /** Call this from toString or {@link #asString(boolean, boolean, String)}*/
+  default String defaultToString() {
+    return asString(true, true, null);
+  }
+
+  /** Call this from toString or {@link #defaultToString()} */
+  default String asString(boolean includeStop, boolean includeCost, @Nullable String summary) {
     StringBuilder buf = new StringBuilder();
     if (isFree()) {
       buf.append("Free");
@@ -182,11 +235,17 @@ public interface RaptorAccessEgress {
       buf.append("Walk");
     }
     buf.append(' ').append(DurationUtils.durationToStr(durationInSeconds()));
+    if (includeCost && c1() > 0) {
+      buf.append(' ').append(RaptorValueFormatter.formatC1(c1()));
+    }
     if (hasRides()) {
       buf.append(' ').append(numberOfRides()).append('x');
     }
     if (hasOpeningHours()) {
       buf.append(' ').append(openingHoursToString());
+    }
+    if (summary != null) {
+      buf.append(' ').append(summary);
     }
     if (includeStop) {
       buf.append(" ~ ").append(stop());

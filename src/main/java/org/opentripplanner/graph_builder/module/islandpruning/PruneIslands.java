@@ -1,6 +1,7 @@
 package org.opentripplanner.graph_builder.module.islandpruning;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.graph_builder.issues.GraphConnectivity;
 import org.opentripplanner.graph_builder.issues.IsolatedStop;
@@ -23,15 +25,11 @@ import org.opentripplanner.street.model.StreetTraversalPermission;
 import org.opentripplanner.street.model.edge.AreaEdge;
 import org.opentripplanner.street.model.edge.AreaEdgeList;
 import org.opentripplanner.street.model.edge.Edge;
-import org.opentripplanner.street.model.edge.ElevatorEdge;
-import org.opentripplanner.street.model.edge.FreeEdge;
 import org.opentripplanner.street.model.edge.StreetEdge;
-import org.opentripplanner.street.model.edge.StreetTransitEntityLink;
-import org.opentripplanner.street.model.edge.StreetTransitEntranceLink;
-import org.opentripplanner.street.model.edge.StreetTransitStopLink;
 import org.opentripplanner.street.model.vertex.StreetVertex;
 import org.opentripplanner.street.model.vertex.TransitStopVertex;
 import org.opentripplanner.street.model.vertex.Vertex;
+import org.opentripplanner.street.model.vertex.VertexLabel;
 import org.opentripplanner.street.search.TraverseMode;
 import org.opentripplanner.street.search.request.StreetSearchRequest;
 import org.opentripplanner.street.search.state.State;
@@ -118,9 +116,7 @@ public class PruneIslands implements GraphBuilderModule {
       areas.add(ae.getArea());
     }
     for (AreaEdgeList a : areas) {
-      for (Vertex v : a.visibilityVertices) {
-        visibilityVertices.add(v);
-      }
+      visibilityVertices.addAll(a.visibilityVertices());
     }
 
     int removed = 0;
@@ -135,11 +131,6 @@ public class PruneIslands implements GraphBuilderModule {
       removed += 1;
     }
     LOG.info("Removed {} edgeless street vertices", removed);
-  }
-
-  @Override
-  public void checkInputs() {
-    //no inputs
   }
 
   /**
@@ -345,33 +336,26 @@ public class PruneIslands implements GraphBuilderModule {
       State s0 = new State(gv, request);
       for (Edge e : gv.getOutgoing()) {
         if (
-          !(
-            e instanceof StreetEdge ||
-            e instanceof ElevatorEdge ||
-            e instanceof FreeEdge ||
-            e instanceof StreetTransitEntityLink
-          )
-        ) {
-          continue;
-        }
-        if (
           e instanceof StreetEdge &&
           shouldMatchNoThruType != ((StreetEdge) e).isNoThruTraffic(traverseMode)
         ) {
           continue;
         }
-        State s1 = e.traverse(s0);
-        if (s1 == null) {
+        State[] states = e.traverse(s0);
+        if (State.isEmpty(states)) {
           continue;
         }
-        Vertex out = s1.getVertex();
+        Arrays
+          .stream(states)
+          .map(State::getVertex)
+          .forEach(out -> {
+            var vertexList = neighborsForVertex.computeIfAbsent(gv, k -> new ArrayList<>());
+            vertexList.add(out);
 
-        var vertexList = neighborsForVertex.computeIfAbsent(gv, k -> new ArrayList<>());
-        vertexList.add(out);
-
-        // note: this assumes that edges are bi-directional. Maybe explicit state traversal is needed for CAR mode.
-        vertexList = neighborsForVertex.computeIfAbsent(out, k -> new ArrayList<>());
-        vertexList.add(gv);
+            // note: this assumes that edges are bi-directional. Maybe explicit state traversal is needed for CAR mode.
+            vertexList = neighborsForVertex.computeIfAbsent(out, k -> new ArrayList<>());
+            vertexList.add(gv);
+          });
       }
     }
   }
@@ -502,7 +486,7 @@ public class PruneIslands implements GraphBuilderModule {
     if (traverseMode == TraverseMode.WALK) {
       // note: do not unlink stop if only CAR mode is pruned
       // maybe this needs more logic for flex routing cases
-      List<String> stopLabels = new ArrayList<>();
+      List<VertexLabel> stopLabels = new ArrayList<>();
       for (Iterator<Vertex> vIter = island.stopIterator(); vIter.hasNext();) {
         Vertex v = vIter.next();
         stopLabels.add(v.getLabel());
@@ -515,7 +499,13 @@ public class PruneIslands implements GraphBuilderModule {
       if (island.stopSize() > 0) {
         // issue about stops that got unlinked in pruning
         issueStore.add(
-          new PrunedStopIsland(island, nothru, restricted, removed, String.join(", ", stopLabels))
+          new PrunedStopIsland(
+            island,
+            nothru,
+            restricted,
+            removed,
+            stopLabels.stream().map(Object::toString).collect(Collectors.joining(","))
+          )
         );
       }
     }

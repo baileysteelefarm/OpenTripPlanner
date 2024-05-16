@@ -15,15 +15,13 @@ import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.linearref.LinearLocation;
 import org.opentripplanner._support.time.ZoneIds;
 import org.opentripplanner.astar.model.GraphPath;
 import org.opentripplanner.astar.model.ShortestPathTree;
 import org.opentripplanner.framework.geometry.GeometryUtils;
 import org.opentripplanner.framework.i18n.NonLocalizedString;
-import org.opentripplanner.graph_builder.module.StreetLinkerModule;
+import org.opentripplanner.graph_builder.module.TestStreetLinkerModule;
 import org.opentripplanner.model.GenericLocation;
 import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.routing.api.request.StreetMode;
@@ -37,12 +35,14 @@ import org.opentripplanner.routing.services.notes.StreetNotesService;
 import org.opentripplanner.street.model.StreetTraversalPermission;
 import org.opentripplanner.street.model.edge.Edge;
 import org.opentripplanner.street.model.edge.StreetEdge;
+import org.opentripplanner.street.model.edge.StreetEdgeBuilder;
 import org.opentripplanner.street.model.note.StreetNote;
 import org.opentripplanner.street.model.vertex.IntersectionVertex;
 import org.opentripplanner.street.model.vertex.TemporaryStreetLocation;
 import org.opentripplanner.street.model.vertex.TransitStopVertex;
 import org.opentripplanner.street.model.vertex.TransitStopVertexBuilder;
 import org.opentripplanner.street.model.vertex.Vertex;
+import org.opentripplanner.street.model.vertex.VertexFactory;
 import org.opentripplanner.street.search.StreetSearchBuilder;
 import org.opentripplanner.street.search.TemporaryVerticesContainer;
 import org.opentripplanner.street.search.request.StreetSearchRequest;
@@ -52,10 +52,11 @@ import org.opentripplanner.street.search.strategy.EuclideanRemainingWeightHeuris
 import org.opentripplanner.transit.model._data.TransitModelForTest;
 import org.opentripplanner.transit.model.basic.TransitMode;
 import org.opentripplanner.transit.model.framework.Deduplicator;
-import org.opentripplanner.transit.service.StopModel;
 import org.opentripplanner.transit.service.TransitModel;
 
 public class TestHalfEdges {
+
+  private final TransitModelForTest testModel = TransitModelForTest.of();
 
   private Graph graph;
   private StreetEdge top, bottom, left, right, leftBack, rightBack;
@@ -64,114 +65,108 @@ public class TestHalfEdges {
   private TransitStopVertex station2;
   private TransitModel transitModel;
 
-  public LineString createGeometry(Vertex a, Vertex b) {
-    GeometryFactory factory = new GeometryFactory();
-    Coordinate[] cs = new Coordinate[2];
-    cs[0] = a.getCoordinate();
-    cs[1] = b.getCoordinate();
-    return factory.createLineString(cs);
-  }
-
   @BeforeEach
   public void setUp() {
     var deduplicator = new Deduplicator();
     graph = new Graph(deduplicator);
-    transitModel = new TransitModel(new StopModel(), deduplicator);
+    var stopModelBuilder = testModel.stopModelBuilder();
+    var factory = new VertexFactory(graph);
     // a 0.1 degree x 0.1 degree square
-    tl = new IntersectionVertex(graph, "tl", -74.01, 40.01);
-    tr = new IntersectionVertex(graph, "tr", -74.0, 40.01);
-    bl = new IntersectionVertex(graph, "bl", -74.01, 40.0);
-    br = new IntersectionVertex(graph, "br", -74.00, 40.0);
+    tl = factory.intersection("tl", -74.01, 40.01);
+    tr = factory.intersection("tr", -74.0, 40.01);
+    bl = factory.intersection("bl", -74.01, 40.0);
+    br = factory.intersection("br", -74.00, 40.0);
 
     top =
-      new StreetEdge(
-        tl,
-        tr,
-        GeometryUtils.makeLineString(-74.01, 40.01, -74.0, 40.01),
-        "top",
-        1500,
-        StreetTraversalPermission.ALL,
-        false
-      );
+      new StreetEdgeBuilder<>()
+        .withFromVertex(tl)
+        .withToVertex(tr)
+        .withGeometry(GeometryUtils.makeLineString(-74.01, 40.01, -74.0, 40.01))
+        .withName("top")
+        .withMeterLength(1500)
+        .withPermission(StreetTraversalPermission.ALL)
+        .withBack(false)
+        .buildAndConnect();
     bottom =
-      new StreetEdge(
-        br,
-        bl,
-        GeometryUtils.makeLineString(-74.01, 40.0, -74.0, 40.0),
-        "bottom",
-        1500,
-        StreetTraversalPermission.ALL,
-        false
-      );
+      new StreetEdgeBuilder<>()
+        .withFromVertex(br)
+        .withToVertex(bl)
+        .withGeometry(GeometryUtils.makeLineString(-74.01, 40.0, -74.0, 40.0))
+        .withName("bottom")
+        .withMeterLength(1500)
+        .withPermission(StreetTraversalPermission.ALL)
+        .withBack(false)
+        .buildAndConnect();
     left =
-      new StreetEdge(
-        bl,
-        tl,
-        GeometryUtils.makeLineString(-74.01, 40.0, -74.01, 40.01),
-        "left",
-        1500,
-        StreetTraversalPermission.ALL,
-        false
-      );
+      new StreetEdgeBuilder<>()
+        .withFromVertex(bl)
+        .withToVertex(tl)
+        .withGeometry(GeometryUtils.makeLineString(-74.01, 40.0, -74.01, 40.01))
+        .withName("left")
+        .withMeterLength(1500)
+        .withPermission(StreetTraversalPermission.ALL)
+        .withBack(false)
+        .buildAndConnect();
     right =
-      new StreetEdge(
-        br,
-        tr,
-        GeometryUtils.makeLineString(-74.0, 40.0, -74.0, 40.01),
-        "right",
-        1500,
-        StreetTraversalPermission.PEDESTRIAN,
-        false
-      );
+      new StreetEdgeBuilder<>()
+        .withFromVertex(br)
+        .withToVertex(tr)
+        .withGeometry(GeometryUtils.makeLineString(-74.0, 40.0, -74.0, 40.01))
+        .withName("right")
+        .withMeterLength(1500)
+        .withPermission(StreetTraversalPermission.PEDESTRIAN)
+        .withBack(false)
+        .buildAndConnect();
 
     @SuppressWarnings("unused")
-    StreetEdge topBack = new StreetEdge(
-      tr,
-      tl,
-      top.getGeometry().reverse(),
-      "topBack",
-      1500,
-      StreetTraversalPermission.ALL,
-      true
-    );
+    StreetEdge topBack = new StreetEdgeBuilder<>()
+      .withFromVertex(tr)
+      .withToVertex(tl)
+      .withGeometry(top.getGeometry().reverse())
+      .withName("topBack")
+      .withMeterLength(1500)
+      .withPermission(StreetTraversalPermission.ALL)
+      .withBack(true)
+      .buildAndConnect();
     @SuppressWarnings("unused")
-    StreetEdge bottomBack = new StreetEdge(
-      br,
-      bl,
-      bottom.getGeometry().reverse(),
-      "bottomBack",
-      1500,
-      StreetTraversalPermission.ALL,
-      true
-    );
+    StreetEdge bottomBack = new StreetEdgeBuilder<>()
+      .withFromVertex(br)
+      .withToVertex(bl)
+      .withGeometry(bottom.getGeometry().reverse())
+      .withName("bottomBack")
+      .withMeterLength(1500)
+      .withPermission(StreetTraversalPermission.ALL)
+      .withBack(true)
+      .buildAndConnect();
     leftBack =
-      new StreetEdge(
-        tl,
-        bl,
-        left.getGeometry().reverse(),
-        "leftBack",
-        1500,
-        StreetTraversalPermission.ALL,
-        true
-      );
+      new StreetEdgeBuilder<>()
+        .withFromVertex(tl)
+        .withToVertex(bl)
+        .withGeometry(left.getGeometry().reverse())
+        .withName("leftBack")
+        .withMeterLength(1500)
+        .withPermission(StreetTraversalPermission.ALL)
+        .withBack(true)
+        .buildAndConnect();
     rightBack =
-      new StreetEdge(
-        tr,
-        br,
-        right.getGeometry().reverse(),
-        "rightBack",
-        1500,
-        StreetTraversalPermission.ALL,
-        true
-      );
+      new StreetEdgeBuilder<>()
+        .withFromVertex(tr)
+        .withToVertex(br)
+        .withGeometry(right.getGeometry().reverse())
+        .withName("rightBack")
+        .withMeterLength(1500)
+        .withPermission(StreetTraversalPermission.ALL)
+        .withBack(true)
+        .buildAndConnect();
 
-    var s1 = TransitModelForTest.stopForTest("fleem station", 40.0099999, -74.005);
-    var s2 = TransitModelForTest.stopForTest("morx station", 40.0099999, -74.002);
+    var s1 = testModel.stop("fleem station", 40.0099999, -74.005).build();
+    var s2 = testModel.stop("morx station", 40.0099999, -74.002).build();
 
-    transitModel.mergeStopModels(StopModel.of().withRegularStop(s1).withRegularStop(s2).build());
+    stopModelBuilder.withRegularStop(s1).withRegularStop(s2);
+    transitModel = new TransitModel(stopModelBuilder.build(), deduplicator);
 
-    station1 = new TransitStopVertexBuilder().withGraph(graph).withStop(s1).build();
-    station2 = new TransitStopVertexBuilder().withGraph(graph).withStop(s2).build();
+    station1 = factory.transitStop(new TransitStopVertexBuilder().withStop(s1));
+    station2 = factory.transitStop(new TransitStopVertexBuilder().withStop(s2));
     station1.addMode(TransitMode.RAIL);
     station2.addMode(TransitMode.RAIL);
 
@@ -541,11 +536,10 @@ public class TestHalfEdges {
     // traverse the FreeEdge from the StreetLocation to the new IntersectionVertex
     StreetSearchRequestBuilder req = StreetSearchRequest.of();
     State traversedOne = new State(start, req.build());
-    State currentState;
     for (Edge e : start.getOutgoing()) {
-      currentState = e.traverse(traversedOne);
-      if (currentState != null) {
-        traversedOne = currentState;
+      var states = e.traverse(traversedOne);
+      if (!State.isEmpty(states)) {
+        traversedOne = states[0];
         break;
       }
     }
@@ -586,9 +580,9 @@ public class TestHalfEdges {
 
     traversedOne = new State(start, req.build());
     for (Edge e : start.getOutgoing()) {
-      currentState = e.traverse(traversedOne);
-      if (currentState != null) {
-        traversedOne = currentState;
+      var states = e.traverse(traversedOne);
+      if (!State.isEmpty(states)) {
+        traversedOne = states[0];
         break;
       }
     }
@@ -680,7 +674,7 @@ public class TestHalfEdges {
   @Test
   public void testNetworkLinker() {
     int numVerticesBefore = graph.getVertices().size();
-    StreetLinkerModule.linkStreetsForTestOnly(graph, transitModel);
+    TestStreetLinkerModule.link(graph, transitModel);
     int numVerticesAfter = graph.getVertices().size();
     assertEquals(4, numVerticesAfter - numVerticesBefore);
     Collection<Edge> outgoing = station1.getOutgoing();

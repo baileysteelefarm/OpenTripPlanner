@@ -64,13 +64,14 @@ import org.opentripplanner.astar.spi.DominanceFunction;
 import org.opentripplanner.astar.spi.TraverseVisitor;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssue;
 import org.opentripplanner.routing.api.request.RouteRequest;
-import org.opentripplanner.routing.core.BicycleOptimizeType;
+import org.opentripplanner.routing.core.VehicleRoutingOptimizeType;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.impl.GraphPathFinder;
 import org.opentripplanner.street.model.edge.Edge;
 import org.opentripplanner.street.model.edge.StreetEdge;
 import org.opentripplanner.street.model.vertex.IntersectionVertex;
 import org.opentripplanner.street.model.vertex.Vertex;
+import org.opentripplanner.street.model.vertex.VertexLabel;
 import org.opentripplanner.street.search.TemporaryVerticesContainer;
 import org.opentripplanner.street.search.state.State;
 import org.opentripplanner.street.search.strategy.DominanceFunctions;
@@ -99,7 +100,7 @@ class DisplayVertex {
   }
 
   public String toString() {
-    String label = vertex.getLabel();
+    String label = vertex.getLabelString();
     if (label.contains("osm node")) {
       label = vertex.getDefaultName();
     }
@@ -156,6 +157,10 @@ class VertexList extends AbstractListModel<DisplayVertex> {
  * TransitStops only, and allows a user to select stops, examine incoming and outgoing edges, and
  * examine trip patterns. It's meant mainly for debugging, so it's totally OK if it develops (say) a
  * bunch of weird buttons designed to debug specific cases.
+ * <p>
+ * 2024-01-26: We talked about the visualizer in the developer meeting and while the code is a bit
+ * dusty, we decided that we want to keep the option open to build make the visualization of routing
+ * steps work again in the future and won't delete it.
  */
 public class GraphVisualizer extends JFrame implements VertexSelectionListener {
 
@@ -304,7 +309,7 @@ public class GraphVisualizer extends JFrame implements VertexSelectionListener {
       new Comparator<>() {
         @Override
         public int compare(Vertex arg0, Vertex arg1) {
-          return arg0.getLabel().compareTo(arg1.getLabel());
+          return arg0.getLabelString().compareTo(arg1.getLabelString());
         }
       }
     );
@@ -485,6 +490,12 @@ public class GraphVisualizer extends JFrame implements VertexSelectionListener {
           // there should be a ui element for walk distance and optimize type
           .withOptimizeType(getSelectedOptimizeType())
       );
+      preferences.withScooter(scooter ->
+        scooter
+          .withSpeed(Float.parseFloat(bikeSpeed.getText()))
+          // there should be a ui element for walk distance and optimize type
+          .withOptimizeType(getSelectedOptimizeType())
+      );
     });
 
     System.out.println("--------");
@@ -542,20 +553,20 @@ public class GraphVisualizer extends JFrame implements VertexSelectionListener {
     }
   }
 
-  BicycleOptimizeType getSelectedOptimizeType() {
+  VehicleRoutingOptimizeType getSelectedOptimizeType() {
     if (opQuick.isSelected()) {
-      return BicycleOptimizeType.QUICK;
+      return VehicleRoutingOptimizeType.SHORTEST_DURATION;
     }
     if (opSafe.isSelected()) {
-      return BicycleOptimizeType.SAFE;
+      return VehicleRoutingOptimizeType.SAFE_STREETS;
     }
     if (opFlat.isSelected()) {
-      return BicycleOptimizeType.FLAT;
+      return VehicleRoutingOptimizeType.FLAT_STREETS;
     }
     if (opGreenways.isSelected()) {
-      return BicycleOptimizeType.GREENWAYS;
+      return VehicleRoutingOptimizeType.SAFEST_STREETS;
     }
-    return BicycleOptimizeType.QUICK;
+    return VehicleRoutingOptimizeType.SHORTEST_DURATION;
   }
 
   private Container makeDiffTab() {
@@ -914,12 +925,12 @@ public class GraphVisualizer extends JFrame implements VertexSelectionListener {
     zoomToNodeButton.addActionListener(
       new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          String nodeName = (String) JOptionPane.showInputDialog(
+          String nodeName = JOptionPane.showInputDialog(
             frame,
             "Node id",
             JOptionPane.PLAIN_MESSAGE
           );
-          Vertex v = getGraph().getVertex(nodeName);
+          Vertex v = getGraph().getVertex(VertexLabel.string(nodeName));
           if (v == null) {
             System.out.println("no such node " + nodeName);
           } else {
@@ -983,7 +994,7 @@ public class GraphVisualizer extends JFrame implements VertexSelectionListener {
             "Node id",
             JOptionPane.PLAIN_MESSAGE
           );
-          Vertex v = getGraph().getVertex(nodeName);
+          Vertex v = getGraph().getVertex(VertexLabel.string(nodeName));
           if (v == null) {
             System.out.println("no such node " + nodeName);
           } else {

@@ -8,8 +8,8 @@
 
 # Updater configuration
 
-This section covers all options that can be set in the *router-config.json* in the 
-[updaters](RouterConfiguration.md) section.
+This section covers options that can be set in the updaters section of `router-config.json`. 
+See the parameter summary and examples in the router configuration documentation
 
 Real-time data are those that are not added to OTP during the graph build phase but during runtime.
 
@@ -44,18 +44,15 @@ The information is downloaded in a single HTTP request and polled regularly.
 
 <!-- INSERT: stop-time-updater -->
 
+### Streaming TripUpdates via MQTT
 
-### TripUpdates via WebSocket
+This updater connects to an MQTT broker and processes TripUpdates in a streaming fashion. This means
+that they will be applied individually in near-realtime rather than in batches at a certain interval.
 
-This updater doesn't poll a data source but opens a persistent connection to the GTFS-RT provider, 
-which then sends incremental updates immediately as they become available.
+This system powers the realtime updates in Helsinki and more information can be found 
+[on Github](https://github.com/HSLdevcom/transitdata).
 
-The [OneBusAway GTFS-realtime exporter project](https://github.com/OneBusAway/onebusaway-gtfs-realtime-exporter)
-provides this kind of streaming, incremental updates over a websocket rather than a single large
-file.
-
-<!-- INSERT: websocket-gtfs-rt-updater -->
-
+<!-- INSERT: mqtt-gtfs-rt-updater -->
 
 ### Vehicle Positions
 
@@ -69,33 +66,23 @@ The information is downloaded in a single HTTP request and polled regularly.
 ## GBFS vehicle rental systems
 
 Besides GTFS-RT transit data, OTP can also fetch real-time data about vehicle rental networks
-including the number of bikes and free parking spaces at each station. We support vehicle rental
-systems that use the GBFS feed format.
+including the number of vehicles and free parking spaces at each station. We support vehicle rental
+systems that use the GBFS standard.
 
-[GBFS](https://github.com/NABSA/gbfs) is used for a variety of shared mobility services, with
-partial support for both v1 and v2.2 ([list of known GBFS feeds](https://github.com/NABSA/gbfs/blob/master/systems.csv)).
+[GBFS](https://github.com/NABSA/gbfs) can be used for a variety of shared mobility services, with
+partial support for both v1 and v2.2 ([list of known GBFS feeds](https://github.com/NABSA/gbfs/blob/master/systems.csv)). OTP supports the following
+GBFS form factors:
+
+- bicycle
+- scooter
+- car
 
 <!-- INSERT: vehicle-rental -->
 
 ## Other updaters in sandboxes
 
-### Vehicle parking
-
-Vehicle parking options and configuration is documented in
-its [sandbox documentation](sandbox/VehicleParking.md).
-
-<!-- INSERT: vehicle-parking -->
-
-
-### SIRI SX updater for Azure Service Bus
-
-This is a Sandbox updater, see [sandbox documentation](sandbox/SiriAzureUpdater.md).
-
-<!-- INSERT: siri-azure-sx-updater -->
-
-
-### Vehicle Rental Service Directory configuration
-
-To configure and url for
-the [VehicleRentalServiceDirectory](sandbox/VehicleRentalServiceDirectory.md).
+- [Vehicle parking](sandbox/VehicleParking.md)
+- [Siri over HTTP](sandbox/siri/SiriUpdater.md)
+- [Siri over Azure Message Bus](sandbox/siri/SiriAzureUpdater.md)
+- [VehicleRentalServiceDirectory](sandbox/VehicleRentalServiceDirectory.md)
 

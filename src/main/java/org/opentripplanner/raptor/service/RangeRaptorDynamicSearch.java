@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
+import org.opentripplanner.framework.application.OTPRequestTimeoutException;
 import org.opentripplanner.raptor.RaptorService;
 import org.opentripplanner.raptor.api.model.RaptorTripSchedule;
 import org.opentripplanner.raptor.api.request.RaptorRequest;
@@ -78,11 +79,11 @@ public class RangeRaptorDynamicSearch<T extends RaptorTripSchedule> {
       return new RaptorResponse<>(
         Collections.emptyList(),
         null,
-        originalRequest,
         // If a trip exist(forward heuristics succeed), but is outside the calculated
         // search-window, then set the search-window params as if the request was
-        // performed. This enable the client to page to the next window
-        requestWithDynamicSearchParams(originalRequest)
+        // performed. This enables the client to page to the next window
+        requestWithDynamicSearchParams(originalRequest),
+        false
       );
     }
   }
@@ -145,8 +146,9 @@ public class RangeRaptorDynamicSearch<T extends RaptorTripSchedule> {
     return new RaptorResponse<>(
       result.extractPaths(),
       new DefaultStopArrivals(result),
-      originalRequest,
-      request
+      request,
+      // This method is not run unless the heuristic reached the destination
+      true
     );
   }
 
@@ -166,17 +168,22 @@ public class RangeRaptorDynamicSearch<T extends RaptorTripSchedule> {
    * @throws DestinationNotReachedException if destination is not reached
    */
   private void runHeuristicsInParallel() {
+    fwdHeuristics.withRequest(originalRequest);
+    revHeuristics.withRequest(originalRequest);
+    Future<?> asyncResult = null;
     try {
-      fwdHeuristics.withRequest(originalRequest);
-      revHeuristics.withRequest(originalRequest);
-
-      Future<?> f = config.threadPool().submit(fwdHeuristics::run);
+      asyncResult = config.threadPool().submit(fwdHeuristics::run);
       revHeuristics.run();
-      f.get();
+      asyncResult.get();
       LOG.debug(
         "Route using RangeRaptor - " + "REVERSE and FORWARD heuristic search performed in parallel."
       );
-    } catch (ExecutionException | InterruptedException e) {
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      // propagate interruption to the running task.
+      asyncResult.cancel(true);
+      throw new OTPRequestTimeoutException();
+    } catch (ExecutionException e) {
       if (e.getCause() instanceof DestinationNotReachedException) {
         throw new DestinationNotReachedException();
       }
